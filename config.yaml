@@ -1,0 +1,30 @@
+# Chess Tournament Simulator Configuration
+# This file configures the behavior of the chess tournament simulator
+
+# How often each board should make a move (in seconds)
+move_interval_seconds: 2.0
+
+# Number of parallel games/boards to simulate
+number_of_boards: 1
+
+# Maximum number of half-moves (plies) per game before forced draw
+max_moves_per_game: 200
+
+# Directory where PGN files will be written
+output_directory: "./pgn_output"
+
+# Event name for PGN headers
+event_name: "Test Live Tournament"
+
+# Site name for PGN headers
+site: "LiveChessCloud Simulator"
+
+# Prefix for round/board identification in PGN headers
+round_prefix: "Round 1 Board"
+
+# If true, automatically start a new game when one finishes
+auto_restart_games: true
+
+# If true, maintain a tournament.pgn file with all finished games
+use_single_tournament_file: true
+

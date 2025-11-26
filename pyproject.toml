@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "pgncreationsimulator"
+version = "0.1.0"
+description = "A chess tournament simulator that plays random legal moves and continuously updates PGN files"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "pgncs", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+python-chess = "^1.999"
+pyyaml = "^6.0"
+
+[tool.poetry.scripts]
+pgncreationsimulator = "pgncs.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
