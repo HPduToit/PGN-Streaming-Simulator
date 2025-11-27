@@ -18,11 +18,10 @@ This project uses Poetry for dependency management. Make sure you have Poetry in
 
 ```bash
 # Install dependencies
+source \<venv\>/bin/activate
 poetry install
 
 # Or if using the virtual environment directly
-source /home/hendrik/venvs/pgncreationsimulator/bin/activate
-pip install -e .
 ```
 
 ## Usage
