@@ -86,20 +86,74 @@ Games end when:
 - Fivefold repetition (draw)
 - Maximum move count is reached (draw)
 
+## PGN HTTP Server
+
+The project includes an HTTP server that serves PGN files in LiveChess Cloud JSON format, allowing the `event_download_manager` to poll it as if it were a real LiveChess Cloud instance.
+
+### Starting the Server
+
+```bash
+# Using Poetry
+poetry run pgn-server
+
+# Or directly with Python
+python -m pgncs.pgn_server
+
+# With custom configuration via environment variables
+PGN_OUTPUT_DIRECTORY=./pgn_output PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000 poetry run pgn-server
+```
+
+### Server Endpoints
+
+The server provides endpoints matching the LiveChess Cloud API format:
+
+- `GET /get/{code}/tournament.json` - Tournament information
+- `GET /get/{code}/round-{round_no}/index.json` - Round pairings
+- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll` - Game data in JSON format
+- `GET /health` - Health check endpoint
+
+The `{code}` parameter is ignored but kept for API compatibility.
+
+### Configuration
+
+The server can be configured via environment variables:
+
+- `PGN_OUTPUT_DIRECTORY` - Directory to watch for PGN files (default: `./pgn_output`)
+- `PGN_SERVER_HOST` - Server host (default: `127.0.0.1`)
+- `PGN_SERVER_PORT` - Server port (default: `8000`)
+
+### Usage with event_download_manager
+
+1. Start the PGN simulator:
+   ```bash
+   poetry run pgncreationsimulator --config config.yaml
+   ```
+
+2. Start the PGN server:
+   ```bash
+   poetry run pgn-server
+   ```
+
+3. Configure `event_download_manager` to use `http://127.0.0.1:8000/get/{code}/...` as the source URL instead of `https://1.pool.livechesscloud.com/get/{code}/...`
+
+The server automatically watches the PGN directory and serves updated game data in real-time.
+
 ## Project Structure
 
 ```
 pgncreationsimulator/
-├── pgncreationsimulator/
-│   ├── __init__.py
-│   ├── config.py          # BaseSettings configuration class
-│   ├── game.py            # LiveGame class for individual games
-│   ├── manager.py          # GameManager for orchestrating games
-│   ├── writer.py           # PgnWriter for file operations
-│   └── main.py             # Main entry point
-├── config.yaml             # Sample configuration file
-├── pyproject.toml          # Poetry configuration
-└── README.md               # This file
+├── src/
+│   └── pgncs/
+│       ├── __init__.py
+│       ├── config.py          # BaseSettings configuration class
+│       ├── game.py            # LiveGame class for individual games
+│       ├── manager.py          # GameManager for orchestrating games
+│       ├── writer.py           # PgnWriter for file operations
+│       ├── pgn_server.py       # HTTP server for serving PGN as JSON
+│       └── main.py             # Main entry point
+├── config.yaml                 # Sample configuration file
+├── pyproject.toml              # Poetry configuration
+└── README.md                   # This file
 ```
 
 ## Requirements
@@ -107,6 +161,9 @@ pgncreationsimulator/
 - Python 3.8+
 - python-chess library
 - PyYAML library
+- FastAPI (for PGN server)
+- uvicorn (for PGN server)
+- watchfiles (for PGN server file watching)
 
 ## License
 

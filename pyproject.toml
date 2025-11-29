@@ -10,9 +10,13 @@ packages = [{include = "pgncs", from = "src"}]
 python = "^3.8"
 python-chess = "^1.999"
 pyyaml = "^6.0"
+fastapi = "^0.104.0"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+watchdog = "^3.0.0"
 
 [tool.poetry.scripts]
 pgncreationsimulator = "pgncs.main:main"
+pgn-server = "pgncs.pgn_server:main"
 
 [build-system]
 requires = ["poetry-core"]
