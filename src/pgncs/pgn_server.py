@@ -393,7 +393,7 @@ def main():
     )
     
     host = os.getenv("PGN_SERVER_HOST", "127.0.0.1")
-    port = int(os.getenv("PGN_SERVER_PORT", "8000"))
+    port = int(os.getenv("PGN_SERVER_PORT", "8006"))
     pgn_dir = os.getenv("PGN_OUTPUT_DIRECTORY", "./pgn_output")
     
     logger.info(f"Starting PGN server on {host}:{port}")

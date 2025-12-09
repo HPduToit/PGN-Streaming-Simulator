@@ -2,10 +2,10 @@
 # This file configures the behavior of the chess tournament simulator
 
 # How often each board should make a move (in seconds)
-move_interval_seconds: 2.0
+move_interval_seconds: 9.0
 
 # Number of parallel games/boards to simulate
-number_of_boards: 1
+number_of_boards: 2
 
 # Maximum number of half-moves (plies) per game before forced draw
 max_moves_per_game: 200
@@ -23,7 +23,7 @@ site: "LiveChessCloud Simulator"
 round_prefix: "Round 1 Board"
 
 # If true, automatically start a new game when one finishes
-auto_restart_games: true
+auto_restart_games: false
 
 # If true, maintain a tournament.pgn file with all finished games
 use_single_tournament_file: true

@@ -156,6 +156,31 @@ pgncreationsimulator/
 └── README.md                   # This file
 ```
 
+## Integration with DMA and ES
+
+**1. Event Service (EVS) - Database & Coordination**
+- Tracks tournaments, games, and sources in a database
+- Identifies what needs to be downloaded via get_pending_download_requests()
+- Exposes API endpoint: GET /live_sources/downloads/pending
+- Consumes Redis streams to process incoming game data
+- Stores PGN files and runs arbiter analysis
+
+**2. Download Manager App (DMA) - Polling & Fetching**
+- Polls LiveChess Cloud endpoints for game data
+- Fetches PGN files and publishes updates to Redis streams
+- Two main components:
+- PresenceService: Polls based on arbiter presence
+- PendingDownloadService: Polls Event Service for backlog work
+
+**Summary**
+1. Event Service tracks what needs downloading (missing rounds/games)
+2. Download Manager polls Event Service for pending work
+3. Download Manager fetches data from LiveChess Cloud
+4. Download Manager publishes updates to Redis streams
+5. Event Service consumes streams and saves PGN files
+6. Event Service runs arbiter analysis and updates the database
+7. This decouples polling (EDM) from storage/processing (EVS) via Redis streams.
+
 ## Requirements
 
 - Python 3.8+
