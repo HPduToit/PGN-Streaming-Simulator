@@ -2,7 +2,7 @@
 # This file configures the behavior of the chess tournament simulator
 
 # How often each board should make a move (in seconds)
-move_interval_seconds: 9.0
+move_interval_seconds: 11
 
 # Number of parallel games/boards to simulate
 number_of_boards: 2
