@@ -124,6 +124,22 @@ class PgnDirectoryWatcher:
         self.boards: Dict[int, chess.Board] = {}  # board_index -> board
         self.converter = PgnToJsonConverter()
         self._load_all_pgns()
+
+    def _list_board_indices_from_fs(self) -> List[int]:
+        """Discover available board PGN files directly from the filesystem.
+
+        Important: PGN writer uses atomic rename which may not trigger watchdog 'modified'
+        events reliably (often emits 'moved'). To avoid stale cache issues, endpoints that
+        need authoritative state should derive board availability from disk.
+        """
+        boards: set[int] = set()
+        for pgn_file in self.pgn_directory.glob("board_*.pgn"):
+            try:
+                board_index = int(pgn_file.stem.split("_")[1])
+                boards.add(board_index)
+            except (ValueError, IndexError):
+                continue
+        return sorted(boards)
     
     def _load_all_pgns(self) -> None:
         """Load all existing PGN files from the directory."""
@@ -184,6 +200,27 @@ class PgnDirectoryWatcher:
             def on_created(self, event):
                 if not event.is_directory:
                     self.watcher._reload_pgn_file(Path(event.src_path))
+
+            def on_moved(self, event):
+                # Atomic writes often emit moved events (temp file -> final filename).
+                if not getattr(event, "is_directory", False):
+                    try:
+                        dest = getattr(event, "dest_path", None)
+                        if dest:
+                            self.watcher._reload_pgn_file(Path(dest))
+                    except Exception:
+                        pass
+
+            def on_deleted(self, event):
+                if not event.is_directory:
+                    try:
+                        p = Path(event.src_path)
+                        if p.suffix == ".pgn" and p.name.startswith("board_"):
+                            board_index = int(p.stem.split("_")[1])
+                            self.watcher.games.pop(board_index, None)
+                            self.watcher.boards.pop(board_index, None)
+                    except Exception:
+                        pass
         
         observer = Observer()
         handler = PgnFileHandler(self)
@@ -220,20 +257,22 @@ class PgnDirectoryWatcher:
     
     def get_available_boards(self) -> List[int]:
         """Get list of available board indices."""
-        return sorted(self.games.keys())
+        # Prefer filesystem discovery to avoid stale in-memory state.
+        boards = self._list_board_indices_from_fs()
+        return boards or sorted(self.games.keys())
     
     def get_tournament_info(self) -> Dict[str, Any]:
         """Get tournament-level information."""
         boards = self.get_available_boards()
-        rounds = []
+        rounds: list[dict[str, Any]] = []
         if boards:
-            # For simplicity, assume all boards are in round 1
-            # You could extend this to read round info from PGN headers
-            rounds = [{"count": len(boards), "live": len([b for b in boards if not self._is_finished(b)])}]
-        
-        return {
-            "rounds": rounds,
-        }
+            live_count = 0
+            for b in boards:
+                game_json = self.get_game_json(b)
+                if game_json and not bool(game_json.get("finished", False)):
+                    live_count += 1
+            rounds = [{"count": len(boards), "live": live_count}]
+        return {"rounds": rounds}
     
     def get_round_index(self, round_no: int) -> Dict[str, Any]:
         """Get round index information (pairings).
@@ -245,34 +284,34 @@ class PgnDirectoryWatcher:
             Dictionary with pairings information
         """
         boards = self.get_available_boards()
-        pairings = []
-        
+        pairings: list[dict[str, Any]] = []
+
+        # Authoritative: derive pairings from the same file-read path as game-{board}.json.
         for board_index in boards:
-            game = self.games.get(board_index)
-            if game:
-                white = game.headers.get("White", f"Player {board_index} White")
-                black = game.headers.get("Black", f"Player {board_index} Black")
-                result = game.headers.get("Result", "*")
-                
-                pairing = {
+            game_json = self.get_game_json(board_index)
+            if not game_json:
+                continue
+            white = game_json.get("white") or f"Player {board_index} White"
+            black = game_json.get("black") or f"Player {board_index} Black"
+            result = game_json.get("result", "*")
+            finished = bool(game_json.get("finished", False))
+            pairings.append(
+                {
                     "white": {"name": white},
                     "black": {"name": black},
                     "result": result,
-                    "live": result == "*",
+                    "live": not finished,
                 }
-                pairings.append(pairing)
-        
-        return {
-            "pairings": pairings,
-        }
+            )
+
+        return {"pairings": pairings}
     
     def _is_finished(self, board_index: int) -> bool:
         """Check if a game is finished."""
-        game = self.games.get(board_index)
-        if game:
-            result = game.headers.get("Result", "*")
-            return result != "*"
-        return False
+        game_json = self.get_game_json(board_index)
+        if game_json is None:
+            return False
+        return bool(game_json.get("finished", False))
 
 
 # Global watcher instance
