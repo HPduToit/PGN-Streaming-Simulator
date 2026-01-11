@@ -166,7 +166,7 @@ class PgnDirectoryWatcher:
     def _reload_pgn_file(self, file_path: Path) -> None:
         """Reload a PGN file when it changes."""
         if file_path.suffix == ".pgn" and file_path.name.startswith("board_"):
-            logger.info(f"PGN file changed: {file_path.name}")
+            # logger.info(f"PGN file changed: {file_path.name}")
             try:
                 board_index = int(file_path.stem.split("_")[1])
                 game = self.converter.parse_pgn_file(file_path)
