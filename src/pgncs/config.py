@@ -19,6 +19,8 @@ class BaseSettings:
     round_prefix: str
     auto_restart_games: bool
     use_single_tournament_file: bool
+    move_strategy: str
+    threefold_stop_preclaim: bool
     
     @classmethod
     def from_file(cls, config_path: str) -> "BaseSettings":
@@ -29,7 +31,9 @@ class BaseSettings:
         
         with open(path, "r") as f:
             data = yaml.safe_load(f)
-        
+
+        data.setdefault("move_strategy", "random")
+        data.setdefault("threefold_stop_preclaim", True)
         return cls(**data)
     
     def validate(self) -> None:
@@ -46,4 +50,5 @@ class BaseSettings:
             raise ValueError("event_name cannot be empty")
         if not self.site:
             raise ValueError("site cannot be empty")
-
+        if self.move_strategy not in {"random", "threefold_preclaim"}:
+            raise ValueError("move_strategy must be 'random' or 'threefold_preclaim'")

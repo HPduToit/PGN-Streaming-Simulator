@@ -2,13 +2,19 @@
 # This file configures the behavior of the chess tournament simulator
 
 # How often each board should make a move (in seconds)
-move_interval_seconds: 11
+move_interval_seconds: 12
 
 # Number of parallel games/boards to simulate
 number_of_boards: 2
 
 # Maximum number of half-moves (plies) per game before forced draw
 max_moves_per_game: 200
+
+# Move strategy: random or threefold_preclaim
+move_strategy: "random"
+
+# If true in threefold_preclaim mode, stop one ply before repetition claim
+threefold_stop_preclaim: true
 
 # Directory where PGN files will be written
 output_directory: "./pgn_output"
@@ -28,3 +34,11 @@ auto_restart_games: false
 # If true, maintain a tournament.pgn file with all finished games
 use_single_tournament_file: true
 
+# Force the game into a three fold repitition
+# 'random' = normal random moves, 'threefold_preclaim' will force a three fold position
+# move_strategy: "random"
+move_strategy: "threefold_preclaim"
+
+# If the program should stop the ply before the threefold occurs. Requires 'move_strategy=threefold_preclaim'
+# values=true/false
+threefold_stop_preclaim: false

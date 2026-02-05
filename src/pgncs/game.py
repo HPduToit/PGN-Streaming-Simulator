@@ -1,11 +1,11 @@
 """Live game representation for a single chess board."""
 
-import random
 import chess
 import chess.pgn
 from datetime import datetime
 from typing import Optional
 
+from .strategy import StrategyResult, create_move_strategy
 
 class LiveGame:
     """Represents a single live chess game on a board."""
@@ -18,6 +18,8 @@ class LiveGame:
         site: str,
         round_prefix: str,
         max_moves: int,
+        move_strategy: str,
+        threefold_stop_preclaim: bool,
     ):
         """Initialize a new live game.
         
@@ -34,6 +36,11 @@ class LiveGame:
         self.max_moves = max_moves
         self.board = chess.Board()
         self.move_count = 0
+        self._forced_stop_reason: Optional[str] = None
+        self.strategy = create_move_strategy(
+            move_strategy,
+            stop_preclaim=threefold_stop_preclaim,
+        )
         
         # Create PGN game object
         self.pgn_game = chess.pgn.Game()
@@ -51,34 +58,34 @@ class LiveGame:
         # PGN node for tracking moves
         self.pgn_node = self.pgn_game
     
-    def make_random_move(self) -> Optional[chess.Move]:
-        """Make a random legal move if the game is not finished.
+    def make_next_move(self) -> StrategyResult:
+        """Make the next move chosen by the configured strategy.
         
         Returns:
-            The move that was made, or None if the game is finished
+            StrategyResult describing the action taken
         """
         if self.is_finished():
-            return None
-        
-        # Get all legal moves
-        legal_moves = list(self.board.legal_moves)
-        if not legal_moves:
-            return None
-        
-        # Choose a random move
-        move = random.choice(legal_moves)
-        
-        # Apply the move
-        self.board.push(move)
+            return StrategyResult(move=None)
+
+        result = self.strategy.select_move(self.board, self.move_count)
+        if result.move is None:
+            if result.stop:
+                self._forced_stop_reason = result.stop_reason or "strategy stop"
+            return result
+
+        self.board.push(result.move)
         self.move_count += 1
-        
-        # Add move to PGN
-        self.pgn_node = self.pgn_node.add_variation(move)
-        
-        return move
+        self.pgn_node = self.pgn_node.add_variation(result.move)
+
+        if result.stop:
+            self._forced_stop_reason = result.stop_reason or "strategy stop"
+
+        return result
     
     def is_finished(self) -> bool:
         """Check if the game is finished."""
+        if self._forced_stop_reason:
+            return True
         if self.move_count >= self.max_moves:
             return True
         return self.board.is_game_over()
@@ -91,6 +98,9 @@ class LiveGame:
         """
         if not self.is_finished():
             return "*"
+
+        if self._forced_stop_reason:
+            return "1/2-1/2"
         
         if self.move_count >= self.max_moves:
             return "1/2-1/2"
@@ -114,6 +124,8 @@ class LiveGame:
     
     def get_termination_reason(self) -> str:
         """Get a human-readable reason for game termination."""
+        if self._forced_stop_reason:
+            return self._forced_stop_reason
         if self.move_count >= self.max_moves:
             return "max moves reached"
         if self.board.is_checkmate():
@@ -151,4 +163,3 @@ class LiveGame:
             temp_board.pop()
             return temp_board.san(last_move)
         return None
-

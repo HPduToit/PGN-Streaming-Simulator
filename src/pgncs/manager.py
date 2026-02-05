@@ -38,6 +38,8 @@ class GameManager:
                 site=self.settings.site,
                 round_prefix=self.settings.round_prefix,
                 max_moves=self.settings.max_moves_per_game,
+                move_strategy=self.settings.move_strategy,
+                threefold_stop_preclaim=self.settings.threefold_stop_preclaim,
             )
             self.games.append(game)
             # Write initial PGN (empty game)
@@ -68,6 +70,8 @@ class GameManager:
             site=self.settings.site,
             round_prefix=self.settings.round_prefix,
             max_moves=self.settings.max_moves_per_game,
+            move_strategy=self.settings.move_strategy,
+            threefold_stop_preclaim=self.settings.threefold_stop_preclaim,
         )
         self.games[board_index - 1] = new_game
         
@@ -80,8 +84,8 @@ class GameManager:
         """Make one move for each active game."""
         for game in self.games:
             if not game.is_finished():
-                move = game.make_random_move()
-                if move:
+                result = game.make_next_move()
+                if result.move:
                     # Get move in SAN notation for logging
                     move_san = game.get_last_move_san()
                     # Calculate move number (full moves, not half-moves)
@@ -100,27 +104,27 @@ class GameManager:
                     
                     # Update PGN file
                     self._write_game_pgn(game)
-                    
-                    # Check if game finished after this move
-                    if game.is_finished():
-                        result = game.get_result()
-                        reason = game.get_termination_reason()
-                        logger.info(
-                            f"Board {game.board_index}: Game finished - "
-                            f"result {result} ({reason})"
-                        )
-                        
-                        # Final PGN write with result
-                        self._write_game_pgn(game)
-                        
-                        # Append to tournament file if enabled
-                        if self.settings.use_single_tournament_file:
-                            pgn_string = game.to_pgn_string()
-                            self.writer.append_tournament_pgn(pgn_string)
-                        
-                        # Restart game if auto-restart is enabled
-                        if self.settings.auto_restart_games:
-                            self._restart_game(game.board_index)
+
+                # Check if game finished after this move or strategy stop
+                if game.is_finished():
+                    result_string = game.get_result()
+                    reason = game.get_termination_reason()
+                    logger.info(
+                        f"Board {game.board_index}: Game finished - "
+                        f"result {result_string} ({reason})"
+                    )
+
+                    # Final PGN write with result
+                    self._write_game_pgn(game)
+
+                    # Append to tournament file if enabled
+                    if self.settings.use_single_tournament_file:
+                        pgn_string = game.to_pgn_string()
+                        self.writer.append_tournament_pgn(pgn_string)
+
+                    # Restart game if auto-restart is enabled
+                    if self.settings.auto_restart_games:
+                        self._restart_game(game.board_index)
     
     def shutdown(self) -> None:
         """Gracefully shutdown, ensuring all PGN files are written."""
@@ -128,4 +132,3 @@ class GameManager:
         for game in self.games:
             self._write_game_pgn(game)
         logger.info("Shutdown complete")
-

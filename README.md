@@ -32,6 +32,8 @@ poetry install
 move_interval_seconds: 2.0
 number_of_boards: 4
 max_moves_per_game: 200
+move_strategy: "random"
+threefold_stop_preclaim: true
 output_directory: "./pgn_output"
 event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
@@ -64,6 +66,8 @@ The configuration file supports the following options:
 - `move_interval_seconds` (float): How often each board makes a move (in seconds)
 - `number_of_boards` (int): Number of parallel games to simulate
 - `max_moves_per_game` (int): Maximum half-moves before forced draw
+- `move_strategy` (str): Move selection strategy (`random` or `threefold_preclaim`)
+- `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers
 - `site` (str): Site name for PGN headers
@@ -193,4 +197,3 @@ pgncreationsimulator/
 ## License
 
 This project is provided as-is for educational and demonstration purposes.
-

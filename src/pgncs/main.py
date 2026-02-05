@@ -76,6 +76,8 @@ def main() -> None:
         logger.info(f"  Max moves per game: {settings.max_moves_per_game}")
         logger.info(f"  Output directory: {settings.output_directory}")
         logger.info(f"  Event: {settings.event_name}")
+        logger.info(f"  Move strategy: {settings.move_strategy}")
+        logger.info(f"  Threefold stop pre-claim: {settings.threefold_stop_preclaim}")
         logger.info(f"  Auto-restart: {settings.auto_restart_games}")
         logger.info(f"  Tournament file: {settings.use_single_tournament_file}")
         
@@ -122,4 +124,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
