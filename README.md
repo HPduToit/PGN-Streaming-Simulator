@@ -5,7 +5,7 @@ A Python-based chess tournament simulator that plays random legal moves on multi
 ## Features
 
 - Simulates multiple parallel chess games (configurable number of boards)
-- Makes random legal moves for both White and Black
+- Makes random legal moves or replays a PGN game
 - Continuously updates PGN files after each move
 - Supports automatic game restart when games finish
 - Optional tournament-wide PGN file for all finished games
@@ -34,6 +34,8 @@ number_of_boards: 4
 max_moves_per_game: 200
 move_strategy: "random"
 threefold_stop_preclaim: true
+pgn_source_path: ""
+pgn_game_index: 1
 output_directory: "./pgn_output"
 event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
@@ -66,8 +68,10 @@ The configuration file supports the following options:
 - `move_interval_seconds` (float): How often each board makes a move (in seconds)
 - `number_of_boards` (int): Number of parallel games to simulate
 - `max_moves_per_game` (int): Maximum half-moves before forced draw
-- `move_strategy` (str): Move selection strategy (`random` or `threefold_preclaim`)
+- `move_strategy` (str): Move selection strategy (`random`, `threefold_preclaim`, or `pgn_file`)
 - `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
+- `pgn_source_path` (str): Path to a PGN file to replay when using `pgn_file`
+- `pgn_game_index` (int): 1-based game index to replay from the PGN file
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers
 - `site` (str): Site name for PGN headers

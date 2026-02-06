@@ -1,1 +1,1 @@
-poetry run pgncreationsimulator --config config.yaml
+poetry run pgncreationsimulator --config dirk.config.yaml
