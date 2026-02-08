@@ -11,7 +11,7 @@ number_of_boards: 2
 max_moves_per_game: 200
 
 # Move strategy: random, threefold_preclaim, or pgn_file
-move_strategy: "random"
+move_strategy: "pgn_file"
 
 # If true in threefold_preclaim mode, stop one ply before repetition claim
 threefold_stop_preclaim: true
