@@ -36,8 +36,8 @@ use_single_tournament_file: true
 
 # Force the game into a three fold repitition
 # 'random' = normal random moves, 'threefold_preclaim' will force a three fold position
-# move_strategy: "random"
-move_strategy: "threefold_preclaim"
+move_strategy: "random"
+# move_strategy: "threefold_preclaim"
 
 # If the program should stop the ply before the threefold occurs. Requires 'move_strategy=threefold_preclaim'
 # values=true/false

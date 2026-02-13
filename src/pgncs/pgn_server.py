@@ -291,8 +291,10 @@ class PgnDirectoryWatcher:
             game_json = self.get_game_json(board_index)
             if not game_json:
                 continue
-            white = game_json.get("white") or f"Player {board_index} White"
-            black = game_json.get("black") or f"Player {board_index} Black"
+            white_player_number = (board_index * 2) - 1
+            black_player_number = board_index * 2
+            white = game_json.get("white") or f"Player {white_player_number}"
+            black = game_json.get("black") or f"Player {black_player_number}"
             result = game_json.get("result", "*")
             finished = bool(game_json.get("finished", False))
             pairings.append(
@@ -443,4 +445,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
