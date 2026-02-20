@@ -3,7 +3,7 @@
 import chess
 import chess.pgn
 from datetime import datetime
-from typing import Optional
+from typing import Optional as Optional
 
 from .strategy import StrategyResult, create_move_strategy
 

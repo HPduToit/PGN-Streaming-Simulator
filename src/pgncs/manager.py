@@ -1,7 +1,7 @@
 """Game manager for orchestrating multiple parallel chess games."""
 
 import logging
-from typing import List
+from typing import List as List
 
 from .config import BaseSettings
 from .game import LiveGame

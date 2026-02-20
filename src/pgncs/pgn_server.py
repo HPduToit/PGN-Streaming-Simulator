@@ -10,7 +10,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any as Any, Dict as Dict, List as List, Optional as Optional
 
 import chess
 import chess.pgn
