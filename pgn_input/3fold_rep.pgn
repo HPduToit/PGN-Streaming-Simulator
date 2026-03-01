@@ -1,0 +1,17 @@
+[ePGN "0.1;DGT LiveChess/2.2.7"]
+[Event "new tournament description"]
+[Site ""]
+[Date "2026.02.27"]
+[Round "?.1"]
+[White "Player 1 White"]
+[Black "Player 1 Black"]
+[Result "1/2-1/2"]
+[WhiteElo "0"]
+[BlackElo "0"]
+
+1. d4 d5 2. Bg5 Bg4 3. Bh4 Bh5 4. Bg5 Bg4 5. Be3 Be6 6. Bg5 Bg4
+
+Note to the LLM:
+On move 4, black played bg4, this should generate a 3 fold prediction --Total claim count = 1
+On move 6, black played bg4, this should generate a 3 fold occurrence --Total claim count = 2
+

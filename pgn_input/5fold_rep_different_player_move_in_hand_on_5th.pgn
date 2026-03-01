@@ -1,0 +1,24 @@
+[ePGN "0.1;DGT LiveChess/2.2.7"]
+[Event "new tournament description"]
+[Site ""]
+[Date "2026.02.28"]
+[Round "?.1"]
+[White "Player 1 White"]
+[Black "Player 1 Black"]
+[Result "1/2-1/2"]
+[WhiteElo "0"]
+[BlackElo "0"]
+
+1. e4 e5 2. Bc4 Bc5 3. Bd3 Bd6 4. Bc4 Bc5 5. Be2 Be7 6. Bc4 Bc5 7. Ba6 Ba3 8. Bc4 Bc5 9. Be6 Be3 10. Bd5 Bc5 11. Bc4
+
+On move 4, black played bc5, this should generate a 3 fold prediction --Total claim count = 1
+On move 6, black played bc5, this should generate a 3 fold occurrence --Total claim count = 2
+On move 7, white played ba6, this should close the 3 fold occurrence with reason not claimed in 1 ply --Total claim count = 2
+On move 8, black played bc5,
+- this should generate a 3 fold occurrence
+- This should also generate a 5 fold prediction --Total claim count = 4
+On move 9, white played be6, this should close the 3 fold occurrence with reason not claimed in 1 ply --Total claim count = 3
+On move 11, white played bc4, this should note generate a 5 fold repetition --Total claim count = 5
+- This should also close all of the remaining open alerts
+
+
