@@ -2,7 +2,7 @@
 # This file configures the behavior of the chess tournament simulator
 
 # How often each board should make a move (in seconds)
-move_interval_seconds: 12
+move_interval_seconds: 3
 
 # Number of parallel games/boards to simulate
 number_of_boards: 2
@@ -11,13 +11,13 @@ number_of_boards: 2
 max_moves_per_game: 200
 
 # Move strategy: random, threefold_preclaim, or pgn_file
-move_strategy: "random"
+move_strategy: "pgn_file"
 
 # If true in threefold_preclaim mode, stop one ply before repetition claim
 threefold_stop_preclaim: true
 
 # Path to a PGN file to replay when move_strategy is pgn_file
-pgn_source_path: ""
+pgn_source_path: "./pgn_input/5fold_rep.pgn"
 
 # 1-based game index to replay from the PGN file
 pgn_game_index: 1
