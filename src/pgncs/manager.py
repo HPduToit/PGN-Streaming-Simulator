@@ -24,12 +24,17 @@ class GameManager:
         self.settings = settings
         self.writer = writer
         self.games: List[LiveGame] = []
+        self._board_settings = {
+            board_index: self.settings.get_board_settings(board_index)
+            for board_index in range(1, self.settings.number_of_boards + 1)
+        }
         self._initialize_games()
 
     def _initialize_games(self) -> None:
         """Initialize all game instances."""
         self.games = []
         for board_index in range(1, self.settings.number_of_boards + 1):
+            board_settings = self._board_settings[board_index]
             game = LiveGame(
                 board_index=board_index,
                 game_index=1,
@@ -37,10 +42,10 @@ class GameManager:
                 site=self.settings.site,
                 round_prefix=self.settings.round_prefix,
                 max_moves=self.settings.max_moves_per_game,
-                move_strategy=self.settings.move_strategy,
-                threefold_stop_preclaim=self.settings.threefold_stop_preclaim,
-                pgn_source_path=self.settings.pgn_source_path,
-                pgn_game_index=self.settings.pgn_game_index,
+                move_strategy=board_settings.move_strategy,
+                threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
+                pgn_source_path=board_settings.pgn_source_path,
+                pgn_game_index=board_settings.pgn_game_index,
             )
             self.games.append(game)
             # Write initial PGN (empty game)
@@ -62,6 +67,7 @@ class GameManager:
         # Find the current game on this board
         game = self.games[board_index - 1]
         new_game_index = game.game_index + 1
+        board_settings = self._board_settings[board_index]
 
         # Create new game
         new_game = LiveGame(
@@ -71,10 +77,10 @@ class GameManager:
             site=self.settings.site,
             round_prefix=self.settings.round_prefix,
             max_moves=self.settings.max_moves_per_game,
-            move_strategy=self.settings.move_strategy,
-            threefold_stop_preclaim=self.settings.threefold_stop_preclaim,
-            pgn_source_path=self.settings.pgn_source_path,
-            pgn_game_index=self.settings.pgn_game_index,
+            move_strategy=board_settings.move_strategy,
+            threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
+            pgn_source_path=board_settings.pgn_source_path,
+            pgn_game_index=board_settings.pgn_game_index,
         )
         self.games[board_index - 1] = new_game
 

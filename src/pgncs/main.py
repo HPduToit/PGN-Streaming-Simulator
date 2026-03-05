@@ -82,6 +82,8 @@ def main() -> None:
         if settings.move_strategy == "pgn_file":
             logger.info(f"  PGN source: {settings.pgn_source_path}")
             logger.info(f"  PGN game index: {settings.pgn_game_index}")
+        if settings.board_configs:
+            logger.info(f"  Board overrides: {len(settings.board_configs)}")
         logger.info(f"  Auto-restart: {settings.auto_restart_games}")
         logger.info(f"  Tournament file: {settings.use_single_tournament_file}")
 

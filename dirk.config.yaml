@@ -22,6 +22,16 @@ pgn_source_path: "./pgn_input/5fold_rep.pgn"
 # 1-based game index to replay from the PGN file
 pgn_game_index: 1
 
+# Optional per-board overrides.
+# Fallback rule: any missing value on board N falls back to the resolved value from board N-1.
+# Board 1 falls back to global defaults above.
+board_configs:
+  - board: 1
+    move_strategy: "random"
+  - board: 2
+    move_strategy: "random"
+    pgn_source_path: "./pgn_input/5fold_rep.pgn"
+
 # Directory where PGN files will be written
 output_directory: "./pgn_output"
 
@@ -32,7 +42,7 @@ event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
 
 # Active tournament round exposed by the PGN server endpoints (round-{n})
-round_number: 2
+round_number: 1
 
 # Prefix for round/board identification in PGN headers
 round_prefix: "Round 1 Board"
