@@ -39,6 +39,7 @@ pgn_game_index: 1
 output_directory: "./pgn_output"
 event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
+round_number: 1
 round_prefix: "Round 1 Board"
 auto_restart_games: true
 use_single_tournament_file: true
@@ -75,6 +76,7 @@ The configuration file supports the following options:
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers
 - `site` (str): Site name for PGN headers
+- `round_number` (int): Active round to expose from server endpoints (`round-{round_number}`); `round_index` and `round` are also accepted aliases
 - `round_prefix` (str): Prefix for round/board identification
 - `auto_restart_games` (bool): Automatically start new games when one finishes
 - `use_single_tournament_file` (bool): Maintain a tournament.pgn file with all finished games
@@ -108,7 +110,7 @@ poetry run pgn-server
 python -m pgncs.pgn_server
 
 # With custom configuration via environment variables
-PGN_OUTPUT_DIRECTORY=./pgn_output PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000 poetry run pgn-server
+PGN_OUTPUT_DIRECTORY=./pgn_output PGN_CONFIG_PATH=./config.yaml PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000 poetry run pgn-server
 ```
 
 ### Server Endpoints
@@ -116,8 +118,8 @@ PGN_OUTPUT_DIRECTORY=./pgn_output PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000
 The server provides endpoints matching the LiveChess Cloud API format:
 
 - `GET /get/{code}/tournament.json` - Tournament information
-- `GET /get/{code}/round-{round_no}/index.json` - Round pairings
-- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll` - Game data in JSON format
+- `GET /get/{code}/round-{round_no}/index.json` - Round pairings (served for configured `round_number` only)
+- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll` - Game data in JSON format (served for configured `round_number` only)
 - `GET /health` - Health check endpoint
 
 The `{code}` parameter is ignored but kept for API compatibility.
@@ -127,6 +129,9 @@ The `{code}` parameter is ignored but kept for API compatibility.
 The server can be configured via environment variables:
 
 - `PGN_OUTPUT_DIRECTORY` - Directory to watch for PGN files (default: `./pgn_output`)
+- `PGN_CONFIG_PATH` - YAML config path used to load `round_number` (optional)
+- If `PGN_CONFIG_PATH` is not set, server checks `./config.yaml` and then `PGN-Streaming-Simulator/config.yaml`
+- `PGN_ACTIVE_ROUND` - Optional explicit round override (takes precedence over YAML)
 - `PGN_SERVER_HOST` - Server host (default: `127.0.0.1`)
 - `PGN_SERVER_PORT` - Server port (default: `8000`)
 

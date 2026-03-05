@@ -54,8 +54,10 @@ class LiveGame:
         self.pgn_game.headers["Site"] = site
         self.pgn_game.headers["Date"] = datetime.now().strftime("%Y.%m.%d")
         self.pgn_game.headers["Round"] = f"{round_prefix} {board_index}"
-        self.pgn_game.headers["White"] = f"Player {board_index} White"
-        self.pgn_game.headers["Black"] = f"Player {board_index} Black"
+        white_player_number = (board_index * 2) - 1
+        black_player_number = board_index * 2
+        self.pgn_game.headers["White"] = f"Player {white_player_number}"
+        self.pgn_game.headers["Black"] = f"Player {black_player_number}"
         self.pgn_game.headers["Board"] = str(board_index)
         if game_index > 1:
             self.pgn_game.headers["GameID"] = str(game_index)

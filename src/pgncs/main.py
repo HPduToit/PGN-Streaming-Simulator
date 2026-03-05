@@ -76,6 +76,7 @@ def main() -> None:
         logger.info(f"  Max moves per game: {settings.max_moves_per_game}")
         logger.info(f"  Output directory: {settings.output_directory}")
         logger.info(f"  Event: {settings.event_name}")
+        logger.info(f"  Round number: {settings.round_number}")
         logger.info(f"  Move strategy: {settings.move_strategy}")
         logger.info(f"  Threefold stop pre-claim: {settings.threefold_stop_preclaim}")
         if settings.move_strategy == "pgn_file":

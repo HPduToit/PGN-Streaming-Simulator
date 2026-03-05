@@ -20,6 +20,7 @@ class BaseSettings:
     output_directory: str = "./pgn_output"
     event_name: str = "Test Live Tournament"
     site: str = "LiveChessCloud Simulator"
+    round_number: int = 1
     round_prefix: str = "Round 1 Board"
     auto_restart_games: bool = False
     use_single_tournament_file: bool = True
@@ -33,11 +34,21 @@ class BaseSettings:
 
         with open(path, "r") as f:
             data = yaml.safe_load(f)
+        if data is None:
+            data = {}
+
+        # Accept round aliases used in some configs.
+        round_value = data.get("round_number", data.get("round_index", data.get("round")))
+        if round_value is not None:
+            data["round_number"] = round_value
+        data.pop("round_index", None)
+        data.pop("round", None)
 
         data.setdefault("move_strategy", "random")
         data.setdefault("threefold_stop_preclaim", True)
         data.setdefault("pgn_source_path", None)
         data.setdefault("pgn_game_index", 1)
+        data.setdefault("round_number", 1)
         return cls(**data)
 
     def validate(self) -> None:
@@ -54,6 +65,8 @@ class BaseSettings:
             raise ValueError("event_name cannot be empty")
         if not self.site:
             raise ValueError("site cannot be empty")
+        if self.round_number <= 0:
+            raise ValueError("round_number must be >= 1")
         if self.pgn_game_index <= 0:
             raise ValueError("pgn_game_index must be >= 1")
         if self.move_strategy == "pgn_file":

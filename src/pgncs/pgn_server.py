@@ -14,6 +14,7 @@ from typing import Any as Any, Dict as Dict, List as List, Optional as Optional
 
 import chess
 import chess.pgn
+import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from watchdog.observers import Observer
@@ -112,14 +113,16 @@ class PgnToJsonConverter:
 class PgnDirectoryWatcher:
     """Watches a directory for PGN files and maintains an in-memory cache."""
     
-    def __init__(self, pgn_directory: Path):
+    def __init__(self, pgn_directory: Path, active_round: int = 1):
         """Initialize the directory watcher.
         
         Args:
             pgn_directory: Path to the directory containing PGN files
+            active_round: Active tournament round to expose via JSON endpoints
         """
         self.pgn_directory = Path(pgn_directory)
         self.pgn_directory.mkdir(parents=True, exist_ok=True)
+        self.active_round = active_round
         self.games: Dict[int, chess.pgn.Game] = {}  # board_index -> game
         self.boards: Dict[int, chess.Board] = {}  # board_index -> board
         self.converter = PgnToJsonConverter()
@@ -271,14 +274,15 @@ class PgnDirectoryWatcher:
                 game_json = self.get_game_json(b)
                 if game_json and not bool(game_json.get("finished", False)):
                     live_count += 1
-            rounds = [{"count": len(boards), "live": live_count}]
+            rounds = [{"count": len(boards), "live": 0} for _ in range(self.active_round)]
+            rounds[self.active_round - 1] = {"count": len(boards), "live": live_count}
         return {"rounds": rounds}
     
     def get_round_index(self, round_no: int) -> Dict[str, Any]:
         """Get round index information (pairings).
         
         Args:
-            round_no: Round number (currently only supports round 1)
+            round_no: Round number
         
         Returns:
             Dictionary with pairings information
@@ -291,8 +295,10 @@ class PgnDirectoryWatcher:
             game_json = self.get_game_json(board_index)
             if not game_json:
                 continue
-            white = game_json.get("white") or f"Player {board_index} White"
-            black = game_json.get("black") or f"Player {board_index} Black"
+            white_player_number = (board_index * 2) - 1
+            black_player_number = board_index * 2
+            white = game_json.get("white") or f"Player {white_player_number}"
+            black = game_json.get("black") or f"Player {black_player_number}"
             result = game_json.get("result", "*")
             finished = bool(game_json.get("finished", False))
             pairings.append(
@@ -319,6 +325,99 @@ _watcher: Optional[PgnDirectoryWatcher] = None
 _observer: Optional[Observer] = None
 
 
+def _parse_positive_int(value: str, env_name: str) -> Optional[int]:
+    """Parse and validate a positive integer value."""
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid %s value '%s'; expected integer >= 1",
+            env_name,
+            value,
+        )
+        return None
+    if parsed < 1:
+        logger.warning(
+            "Invalid %s value '%s'; expected integer >= 1",
+            env_name,
+            value,
+        )
+        return None
+    return parsed
+
+
+def _load_round_from_config(config_path: str) -> Optional[int]:
+    """Load configured round from a YAML config file if available."""
+    path = Path(config_path)
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        if not isinstance(data, dict):
+            logger.warning("Unexpected YAML structure in %s; expected mapping", path)
+            return None
+        round_number = data.get("round_number", data.get("round_index", data.get("round")))
+        if round_number is None:
+            return None
+        parsed = _parse_positive_int(str(round_number), "round_number")
+        if parsed is None:
+            logger.warning("Ignoring invalid round_number in %s", path)
+        return parsed
+    except Exception as e:
+        logger.warning("Failed reading PGN config at %s: %s", path, e)
+        return None
+
+
+def _default_config_candidates() -> list[Path]:
+    """Build default config search paths when PGN_CONFIG_PATH is not provided."""
+    candidates: list[Path] = []
+    cwd_config = Path.cwd() / "config.yaml"
+    candidates.append(cwd_config)
+    repo_config = Path(__file__).resolve().parents[2] / "config.yaml"
+    if repo_config not in candidates:
+        candidates.append(repo_config)
+    return candidates
+
+
+def _resolve_active_round() -> int:
+    """Resolve active round from env/config with sensible defaults."""
+    env_round = os.getenv("PGN_ACTIVE_ROUND")
+    if env_round:
+        parsed = _parse_positive_int(env_round, "PGN_ACTIVE_ROUND")
+        if parsed is not None:
+            logger.info("Using active round from PGN_ACTIVE_ROUND=%s", parsed)
+            return parsed
+
+    env_config_path = os.getenv("PGN_CONFIG_PATH")
+    if env_config_path:
+        config_round = _load_round_from_config(env_config_path)
+        if config_round is not None:
+            logger.info(
+                "Using active round %s from config file %s",
+                config_round,
+                env_config_path,
+            )
+            return config_round
+        logger.warning(
+            "No valid round found in PGN_CONFIG_PATH=%s; falling back to defaults",
+            env_config_path,
+        )
+    else:
+        for candidate in _default_config_candidates():
+            config_round = _load_round_from_config(str(candidate))
+            if config_round is not None:
+                logger.info(
+                    "Using active round %s from config file %s",
+                    config_round,
+                    candidate,
+                )
+                return config_round
+
+    logger.info("Using default active round 1")
+    return 1
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI startup and shutdown."""
@@ -326,9 +425,10 @@ async def lifespan(app: FastAPI):
     
     # Startup
     pgn_dir = os.getenv("PGN_OUTPUT_DIRECTORY", "./pgn_output")
-    _watcher = PgnDirectoryWatcher(pgn_dir)
+    active_round = _resolve_active_round()
+    _watcher = PgnDirectoryWatcher(pgn_dir, active_round=active_round)
     _observer = _watcher.start_watching()
-    logger.info("PGN server started")
+    logger.info("PGN server started (active round %s)", active_round)
     
     yield
     
@@ -374,9 +474,11 @@ async def get_round_index(code: str, round_no: int):
     if _watcher is None:
         raise HTTPException(status_code=503, detail="Server not initialized")
     
-    if round_no != 1:
-        # Currently only support round 1
-        raise HTTPException(status_code=404, detail=f"Round {round_no} not found")
+    if round_no != _watcher.active_round:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Round {round_no} not found (active round is {_watcher.active_round})",
+        )
     
     round_info = _watcher.get_round_index(round_no)
     
@@ -399,8 +501,11 @@ async def get_game_json(code: str, round_no: int, board_no: int, poll: Optional[
     if _watcher is None:
         raise HTTPException(status_code=503, detail="Server not initialized")
     
-    if round_no != 1:
-        raise HTTPException(status_code=404, detail=f"Round {round_no} not found")
+    if round_no != _watcher.active_round:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Round {round_no} not found (active round is {_watcher.active_round})",
+        )
     
     game_json = _watcher.get_game_json(board_no)
     if game_json is None:
@@ -417,7 +522,11 @@ async def get_game_json(code: str, round_no: int, board_no: int, poll: Optional[
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "watcher_initialized": _watcher is not None}
+    return {
+        "status": "ok",
+        "watcher_initialized": _watcher is not None,
+        "active_round": _watcher.active_round if _watcher else None,
+    }
 
 
 def main():
@@ -443,4 +552,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
