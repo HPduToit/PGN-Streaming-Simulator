@@ -1,0 +1,15 @@
+[ePGN "0.1;DGT LiveChess/2.2.7"]
+[Event "new tournament description"]
+[Site ""]
+[Date "2026.02.27"]
+[Round "?.1"]
+[White "Player 1 White"]
+[Black "Player 1 Black"]
+[Result "1/2-1/2"]
+[WhiteElo "0"]
+[BlackElo "0"]
+
+1. d4 d5 2. Bg5 Bg4 3. Bf6 Bh5 4. Bh4 Bg4 5. Bg5
+
+# Note to LLM:
+On move 5 White plays Bg5, this should not generate a 3 fold prediction since a different player has move in hand.

@@ -56,19 +56,19 @@ def main() -> None:
         action="store_true",
         help="Enable verbose logging",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Setup logging
     setup_logging(verbose=args.verbose)
     logger = logging.getLogger(__name__)
-    
+
     try:
         # Load configuration
         logger.info(f"Loading configuration from {args.config}")
         settings = BaseSettings.from_file(args.config)
         settings.validate()
-        
+
         # Log configuration summary
         logger.info("Configuration loaded:")
         logger.info(f"  Boards: {settings.number_of_boards}")
@@ -76,33 +76,39 @@ def main() -> None:
         logger.info(f"  Max moves per game: {settings.max_moves_per_game}")
         logger.info(f"  Output directory: {settings.output_directory}")
         logger.info(f"  Event: {settings.event_name}")
+        logger.info(f"  Round number: {settings.round_number}")
         logger.info(f"  Move strategy: {settings.move_strategy}")
         logger.info(f"  Threefold stop pre-claim: {settings.threefold_stop_preclaim}")
+        if settings.move_strategy == "pgn_file":
+            logger.info(f"  PGN source: {settings.pgn_source_path}")
+            logger.info(f"  PGN game index: {settings.pgn_game_index}")
+        if settings.board_configs:
+            logger.info(f"  Board overrides: {len(settings.board_configs)}")
         logger.info(f"  Auto-restart: {settings.auto_restart_games}")
         logger.info(f"  Tournament file: {settings.use_single_tournament_file}")
-        
+
         # Ensure output directory exists
         output_dir = Path(settings.output_directory)
         output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Output directory ready: {output_dir.absolute()}")
-        
+
         # Initialize components
         writer = PgnWriter(settings.output_directory)
         manager = GameManager(settings, writer)
-        
+
         # Setup signal handler for graceful shutdown
         def signal_handler(sig, frame):
             logger.info("\nReceived interrupt signal, shutting down gracefully...")
             manager.shutdown()
             sys.exit(0)
-        
+
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-        
+
         # Main loop
         logger.info("Starting tournament simulation...")
         logger.info("Press Ctrl+C to stop")
-        
+
         try:
             while True:
                 manager.make_moves()
@@ -110,7 +116,7 @@ def main() -> None:
         except KeyboardInterrupt:
             logger.info("\nReceived keyboard interrupt, shutting down...")
             manager.shutdown()
-    
+
     except FileNotFoundError as e:
         logger.error(f"Configuration error: {e}")
         sys.exit(1)

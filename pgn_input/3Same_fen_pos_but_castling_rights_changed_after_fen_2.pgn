@@ -1,0 +1,19 @@
+[ePGN "0.1;DGT LiveChess/2.2.7"]
+[Event "new tournament description"]
+[Site ""]
+[Date "????.??.??"]
+[Round "1.1"]
+[White "Clause, Santa"]
+[Black "Grinch, The"]
+[Result "*"]
+[WhiteElo "0"]
+[BlackElo "0"]
+
+1. e4 e5 2. Bc4 Bc5 3. Ne2 Ne7 4. Nec3 Nec6 5. d3 d6 6. Ne2 Ne7 7. Nec3 Nec6
+8. O-O O-O 9. Re1 Re8 10. Re3 Re6 11. Kf1 Kf8 12. Ke2 Ke7 13. Kd2 Kd7 14. Re1 Re8
+15. Rh1 Rh8 16. Ke1 Ke8 17. Na3 Na6 18. Be3 Be6 *
+
+# Note to the LLM.
+On move 7 black when he moved Nec6, there needs to generate a 3fold repetition prediction.
+On move 8 white castles the status of the 3 fold prediction needs to be closed with the reason being the one that closes it due to castling rights. Look it up in the code.
+On move 16 black moves ke8, this should not create another 3 fold repetition. So on move 19 white, check to see that there is only 1 claim event, which is closed due to castling rights

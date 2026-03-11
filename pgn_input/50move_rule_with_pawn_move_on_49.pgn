@@ -1,0 +1,30 @@
+[ePGN "0.1;DGT LiveChess/2.2.7"]
+[Event "new tournament description"]
+[Site ""]
+[Date "2026.02.28"]
+[Round "?.1"]
+[White "Player 1 White"]
+[Black "Player 1 Black"]
+[Result "1/2-1/2"]
+[WhiteElo "0"]
+[BlackElo "0"]
+
+1. d4 d5 2. Bf4 Bf5 3. Bxc7 Bxc2 4. Qxc2 Qxc7 5. Qxc7 Na6 6. e3 Nxc7
+7. Nc3 e5 8. dxe5 f6 9. exf6 Nxf6 10. Nxd5 Nfxd5 11. Nf3 Nxe3
+12. fxe3 Bb4+ 13. Nd2 Bxd2+ 14. Kxd2 a6 15. Bxa6 bxa6 16. Rac1 Ra7
+17. Rxc7 Rxc7 18. Rc1 Rxc1 19. Kxc1 O-O 20. g4 Rf4 21. e4 Rxe4
+22. h4 Rxg4 23. b4 Rxb4 24. a4 Rxa4 25. Kd2 Rc4 26. Kd1 a5 27. Kd2 a4
+28. Kd3 a3 29. Kd2 a2 30. Kd3 a1=Q 31. Kd2 Qd1+ 32. Kxd1 Ra4 33. Kc1 Ra8
+34. Kb1 Ra7 35. Kb2 Ra6 36. Kb3 Ra5 37. Kb4 Ra3 38. Kb5 Ra2 39. Kb6 Ra1
+40. Kb7 Rb1+ 41. Kc8 Rb2 42. Kc7 Rb3 43. Kc6 Rb4 44. Kc5 Rb5+ 45. Kc4 Rb6
+46. Kc3 Rb7 47. Kc2 Rb8 48. Kc1 Rc8+ 49. Kd1 Rc7 50. Kd2 Rc6 51. Kd3 Rc5
+52. Kd4 Rc4+ 53. Kd5 Rc3 54. Kd6 Rc2 55. Kd7 Rc1 56. Kd8 Rd1+ 57. Ke8 Rd2
+58. Ke7 Rd3 59. Ke6 Rd4 60. Ke5 Rd5+ 61. Ke4 Rd6 62. Ke3 Rd7 63. Ke2 Rd8
+64. Ke1 Re8+ 65. Kd1 Re7 66. Kd2 Re6 67. Kd3 Re5 68. Kd4 Re4+ 69. Kd5 Re3
+70. Kd6 Re2 71. Kd7 Re1 72. Kd8 Rd1+ 73. Kc8 Rd2 74. Kc7 Rd3 75. Kc6 Rd4
+76. Kc5 Rd5+ 77. Kc4 Rd6 78. Kc3 Rd7 79. Kc2 Rd8 80. Kc1 Rc8+ 81. Kb1 Rc7
+82. Kb2 g6
+
+# Note to LLM:
+On move 79 white plays kc2, this should create a 50 move rule prediction --Total claim count = 1
+On move 82 black plays g, this should cancel the 50 move prediction due to pawn movement --Total claim count = 1

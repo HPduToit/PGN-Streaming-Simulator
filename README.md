@@ -5,7 +5,8 @@ A Python-based chess tournament simulator that plays random legal moves on multi
 ## Features
 
 - Simulates multiple parallel chess games (configurable number of boards)
-- Makes random legal moves for both White and Black
+- Supports per-board move strategies (`random`, `threefold_preclaim`, `pgn_file`) with cascading fallback
+- Makes random legal moves or replays a PGN game
 - Continuously updates PGN files after each move
 - Supports automatic game restart when games finish
 - Optional tournament-wide PGN file for all finished games
@@ -34,9 +35,23 @@ number_of_boards: 4
 max_moves_per_game: 200
 move_strategy: "random"
 threefold_stop_preclaim: true
+pgn_source_path: ""
+pgn_game_index: 1
+board_configs:
+  - board: 1
+    move_strategy: "random"
+  - board: 2
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/5fold_rep.pgn"
+  - board: 3
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/3fold_rep.pgn"
+  - board: 4
+    move_strategy: "threefold_preclaim"
 output_directory: "./pgn_output"
 event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
+round_number: 1
 round_prefix: "Round 1 Board"
 auto_restart_games: true
 use_single_tournament_file: true
@@ -66,14 +81,36 @@ The configuration file supports the following options:
 - `move_interval_seconds` (float): How often each board makes a move (in seconds)
 - `number_of_boards` (int): Number of parallel games to simulate
 - `max_moves_per_game` (int): Maximum half-moves before forced draw
-- `move_strategy` (str): Move selection strategy (`random` or `threefold_preclaim`)
+- `move_strategy` (str): Move selection strategy (`random`, `threefold_preclaim`, or `pgn_file`)
 - `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
+- `pgn_source_path` (str): Path to a PGN file to replay when using `pgn_file`
+- `pgn_game_index` (int): 1-based game index to replay from the PGN file
+- `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`)
+- `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config
+- `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and per-board `pgn_file` must resolve to an existing `pgn_source_path`
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers
 - `site` (str): Site name for PGN headers
+- `round_number` (int): Active round to expose from server endpoints (`round-{round_number}`); `round_index` and `round` are also accepted aliases
 - `round_prefix` (str): Prefix for round/board identification
 - `auto_restart_games` (bool): Automatically start new games when one finishes
 - `use_single_tournament_file` (bool): Maintain a tournament.pgn file with all finished games
+
+Example fallback behavior:
+- If board 1 is `random`, board 2 is `pgn_file`, and board 3 has no `move_strategy`, board 3 resolves to `pgn_file`.
+- If board 2 and board 3 both omit `move_strategy`, both resolve to board 1's strategy.
+
+### Per-board override resolution
+
+Each `board_configs` entry overrides only the fields you set. Any missing field inherits from the previous resolved board:
+
+1. Board 1 starts from global defaults (`move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`).
+2. Board N (N > 1) starts from board N-1 resolved values.
+3. Values present in board N override that base.
+
+Notes:
+- If `board` is omitted in an entry, it defaults to that entry's 1-based list position.
+- Auto-restarted games keep the same resolved per-board settings as their board's initial game.
 
 ## Output Files
 
@@ -104,7 +141,7 @@ poetry run pgn-server
 python -m pgncs.pgn_server
 
 # With custom configuration via environment variables
-PGN_OUTPUT_DIRECTORY=./pgn_output PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000 poetry run pgn-server
+PGN_OUTPUT_DIRECTORY=./pgn_output PGN_CONFIG_PATH=./config.yaml PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000 poetry run pgn-server
 ```
 
 ### Server Endpoints
@@ -112,8 +149,8 @@ PGN_OUTPUT_DIRECTORY=./pgn_output PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000
 The server provides endpoints matching the LiveChess Cloud API format:
 
 - `GET /get/{code}/tournament.json` - Tournament information
-- `GET /get/{code}/round-{round_no}/index.json` - Round pairings
-- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll` - Game data in JSON format
+- `GET /get/{code}/round-{round_no}/index.json` - Round pairings (served for configured `round_number` only)
+- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll` - Game data in JSON format (served for configured `round_number` only)
 - `GET /health` - Health check endpoint
 
 The `{code}` parameter is ignored but kept for API compatibility.
@@ -123,6 +160,9 @@ The `{code}` parameter is ignored but kept for API compatibility.
 The server can be configured via environment variables:
 
 - `PGN_OUTPUT_DIRECTORY` - Directory to watch for PGN files (default: `./pgn_output`)
+- `PGN_CONFIG_PATH` - YAML config path used to load `round_number` (optional)
+- If `PGN_CONFIG_PATH` is not set, server checks `./config.yaml` and then `PGN-Streaming-Simulator/config.yaml`
+- `PGN_ACTIVE_ROUND` - Optional explicit round override (takes precedence over YAML)
 - `PGN_SERVER_HOST` - Server host (default: `127.0.0.1`)
 - `PGN_SERVER_PORT` - Server port (default: `8000`)
 

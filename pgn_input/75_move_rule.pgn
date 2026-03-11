@@ -1,0 +1,36 @@
+[ePGN "0.1;DGT LiveChess/2.2.7"]
+[Event "new tournament description"]
+[Site ""]
+[Date "2026.02.21"]
+[Round "?.1"]
+[White "Player 1 White"]
+[Black "Player 1 Black"]
+[Result "1/2-1/2"]
+[WhiteElo "0"]
+[BlackElo "0"]
+
+1. e4 e5 2. Nf3 Nf6 3. Nxe5 Nxe4 2. Qe2 Qe7 3. Qxe4 Qxe5 4. Qxe5+ Be7 5. Bb5 b6 6. Qd6 Bxd6
+7. Bxd7+ Bxd7 8. d4 Be5 9. dxe5 f6 10. exf6 gxf6 11. Nc3 Nc6 12. Bf4 O-O-O 13. Bxc7 Kxc7
+14. O-O Bf5 15. Rfd1 Rxd1+ 16. Rxd1 Rd8 17. Rxd8 Kxd8 18. a4 b5 19. axb5 Bxc2 20. bxc6 Kc7
+21. b4 Kxc6 22. b5+ Kb6 23. g4 a6 24. bxa6 h6 25. h4 Kxa6 26. g5 hxg5 27. hxg5 f5 28. f4 Be4
+29. Nd5 Bxd5 30. Kh2 Be4 31. Kh3 Ka5 32. Kh4 Ka4 33. Kh5 Ka3 34. Kh6 Ka2 35. Kg7 Ka1 36. Kg8 Kb1
+37. Kf8 Kc1 38. Ke8 Kd1 39. Kd8 Ke1 40. Kc8 Kf1 41. Kb8 Kg1 42. Ka7 Kh2 43. Ka6 Kh3 44. Ka5 Kh4
+45. Ka4 Kh5 46. Ka3 Kg6 47. Ka2 Kh7 48. Ka1 Kg8 49. Kb2 Kf8 50. Kc1 Ke8 51. Kd1 Kd8 52. Ke1 Kc8
+53. Kf1 Kb8 54. Kf2 Kb7 55. Ke2 Kc7 56. Kd2 Kd7 57. Kc3 Ke7 58. Kb2 Kf7 59. Kb3 Kg7 60. Kb4 Kg6
+61. Kb5 Kf7 62. Kb6 Ke6 63. Kc7 Kd5 64. Kd7 Kc5 65. Ke7 Kb6 66. Ke8 Kb7 67. Kf7 Kc8 68. Kg8 Kd7
+69. Kg7 Ke6 70. Kg6 Kd6 71. Kf7 Kc5 72. Ke8 Bf3 73. Kd7 Kd5 74. Kc7 Ke6 75. Kc8 Ke7 76. Kb8 Kd8
+77. Ka7 Kc8 78. Kb6 Kb8 79. Ka5 Ka7 80. Ka4 Ka6 81. Ka3 Ka5 82. Ka2 Ka4 83. Ka1 Ka3 84. Kb1 Kb3
+85. Kc1 Ka2 86. Kd2 Kb2 87. Kd3 Bg4 88. Kd4 Kc2 89. Kc5 Kb3 90. Kd5 Kb4 91. Kc6 Kc4 92. Kd6 Kd4
+93. Ke6 Kc5 94. Ke7 Kc6 95. Kf6 Kd7 96. Kg7 Ke8 97. Kg8 Bd1 98. Kg7 Kd7 99. Kf7 Kc6 100. Ke6 Kc5
+101. Kd7 Kd5 102. Kc7 Kc4 103. Kb6 Kd4 104. Kb5 Kd3 105. Kb4 Ke3 106. Kc3 Kf2 107. Kb2 Ke3
+108. Ka3 Kd4 109. Kb2 Ba4 110. Kc1 Kc3 111. Kb1 Kb4 112. Kb2 Kb5 113. Kc3 Kc6 114. Kd2 Kd5
+115. Ke3 Ke6 116. Kf2
+
+# Note to LLM:
+On move 31 black the last piece is captured. --Total claim count = 0
+On move 79 black plays kc8, this should result in an 50 move rule prediction --Total claim count = 1
+On move 81 black plays ka7, this should result in a 50 move rule occurrence and closing the 50 move rule prediction by system due to 50 move rule reached --Total claim count = 2
+On move 104 black plays kc4, this should result in an 75 move rule prediction --Total claim count = 3
+On move 106 black played Kd3, this should result in the 50 move rule claim to be closed by system because 75 rule results in a draw, a 75 move occurrence should also pop up  --Total claim count = 1
+
+
