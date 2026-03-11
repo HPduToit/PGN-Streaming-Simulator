@@ -83,11 +83,11 @@ The configuration file supports the following options:
 - `max_moves_per_game` (int): Maximum half-moves before forced draw
 - `move_strategy` (str): Move selection strategy (`random`, `threefold_preclaim`, or `pgn_file`)
 - `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
-- `pgn_source_path` (str): Path to a PGN file to replay when using `pgn_file`
-- `pgn_game_index` (int): 1-based game index to replay from the PGN file
+- `pgn_source_path` (str): Global default PGN path for `pgn_file`; board 1 starts from this value and later boards may inherit it via fallback unless overridden in `board_configs`
+- `pgn_game_index` (int): Global default 1-based game index paired with `pgn_source_path` for `pgn_file`; also participates in board fallback
 - `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`)
 - `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config
-- `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and per-board `pgn_file` must resolve to an existing `pgn_source_path`
+- `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and any board that resolves to `pgn_file` must resolve to an existing `pgn_source_path` (direct override or inherited fallback)
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers
 - `site` (str): Site name for PGN headers
@@ -110,6 +110,7 @@ Each `board_configs` entry overrides only the fields you set. Any missing field 
 
 Notes:
 - If `board` is omitted in an entry, it defaults to that entry's 1-based list position.
+- `pgn_source_path` is intentionally both a global default and a per-board override field; this allows concise configs while still supporting board-specific PGN files.
 - Auto-restarted games keep the same resolved per-board settings as their board's initial game.
 
 ## Output Files

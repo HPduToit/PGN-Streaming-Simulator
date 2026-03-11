@@ -16,15 +16,20 @@ move_strategy: "random"
 # If true in threefold_preclaim mode, stop one ply before repetition claim
 threefold_stop_preclaim: true
 
-# Path to a PGN file to replay when move_strategy is pgn_file
+# Global default PGN path used when a board resolves to move_strategy: pgn_file.
+# This value is inherited by board 1 first, then by later boards through fallback
+# unless explicitly overridden in board_configs.
 pgn_source_path: "./pgn_input/5fold_rep.pgn"
 
-# 1-based game index to replay from the PGN file
+# 1-based game index paired with pgn_source_path when using pgn_file strategy
+# (same fallback behavior as pgn_source_path).
 pgn_game_index: 1
 
 # Optional per-board overrides.
-# Fallback rule: any missing value on board N falls back to the resolved value from board N-1.
-# Board 1 falls back to global defaults above.
+# Fallback rule: any missing field on board N inherits from resolved board N-1.
+# Board 1 inherits from global defaults above.
+# For any board that resolves to move_strategy: pgn_file, a non-empty pgn_source_path
+# must resolve (either from that board override or inherited fallback/global default).
 board_configs:
   - board: 1
     move_strategy: "random"
