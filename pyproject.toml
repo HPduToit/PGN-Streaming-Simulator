@@ -16,9 +16,11 @@ pydantic = ">=2.12.5,<3.0.0"
 pydantic-core = ">=2.41.5,<3.0.0"
 watchfiles = ">=1.1.1,<2.0.0"
 watchdog = "^3.0.0"
+psycopg = {extras = ["binary"], version = ">=3.2.12,<4.0.0"}
 
 [tool.poetry.scripts]
 pgncreationsimulator = "pgncs.main:main"
+pgn-tournament = "pgncs.main:main"
 pgn-server = "pgncs.pgn_server:main"
 
 [build-system]

@@ -47,7 +47,7 @@ event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
 
 # Active tournament round exposed by the PGN server endpoints (round-{n})
-round_number: 1
+round_number: 3
 
 # Prefix for round/board identification in PGN headers
 round_prefix: "Round 2 Board"

@@ -1,33 +1,52 @@
 # Chess Tournament Simulator
 
-A Python-based chess tournament simulator that plays random legal moves on multiple parallel boards and continuously updates PGN files in real-time, similar to live chess tournament displays.
+A Python-based chess tournament simulator that stores tournament configs in a database, preserves per-board config overrides, runs multiple tournaments from one server process, and serves LiveChess/DGT-compatible HTTP endpoints per tournament code.
 
 ## Features
 
-- Simulates multiple parallel chess games (configurable number of boards)
-- Supports per-board move strategies (`random`, `threefold_preclaim`, `pgn_file`) with cascading fallback
-- Makes random legal moves or replays a PGN game
-- Continuously updates PGN files after each move
-- Supports automatic game restart when games finish
-- Optional tournament-wide PGN file for all finished games
-- Configurable via YAML configuration file
-- Graceful shutdown handling
+- Creates persisted tournaments from YAML config files and assigns each one a UUID code
+- Preserves branch-specific per-board overrides via `board_configs`
+- Preserves `round_number` and serves only the configured active round per tournament
+- Starts a specific stored tournament on demand
+- Stops a specific running tournament on demand
+- Runs multiple tournaments concurrently from one FastAPI server process
+- Serves `tournament.json`, `round-{n}/index.json`, and `game-{board}.json?poll` per tournament code
+- Writes per-board PGN files under `output_directory/<uuid>/`
+- Stops a tournament automatically when all boards finish
+- Includes destructive clean/reset/restart scripts similar to UMS
+- Supports PostgreSQL in production and SQLite as a local fallback
 
 ## Installation
 
-This project uses Poetry for dependency management. Make sure you have Poetry installed, then:
-
 ```bash
-# Install dependencies
-source \<venv\>/bin/activate
 poetry install
-
-# Or if using the virtual environment directly
 ```
 
-## Usage
+For PostgreSQL-backed usage:
 
-1. Create or edit a configuration file (see `config.yaml` for an example):
+When using the provided wrapper scripts, you can set the PostgreSQL connection pieces instead and let the scripts build `PGN_DATABASE_URL` automatically:
+
+```env
+PGNSS_POSTGRES_DB=pgnss_db
+PGNSS_POSTGRES_USER=rtinstall
+PGNSS_POSTGRES_PASSWORD=N0Pa55wrd
+PGNSS_POSTGRES_PORT=50009
+PGN_SERVER_PORT=8006
+```
+
+If `PGNSS_POSTGRES_*` are set in your shell or `.env`, [source.sh](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.sh) and [source.ps1](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.ps1) generate `PGN_DATABASE_URL` for you, so `PGN_DATABASE_URL` does not need to be set manually when you start the simulator through the provided scripts.
+
+You can also directly set PGN_DATABASE_URL but this will create issues if the values aren't the same as in the docker compose file.
+
+```bash
+export PGN_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pgn_simulator
+```
+
+If `PGN_DATABASE_URL` is not set, the simulator uses a local SQLite database file.
+
+## Config File
+
+Example `config.yaml`:
 
 ```yaml
 move_interval_seconds: 2.0
@@ -53,187 +72,237 @@ event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
 round_number: 1
 round_prefix: "Round 1 Board"
-auto_restart_games: true
+auto_restart_games: false
 use_single_tournament_file: true
 ```
 
-2. Run the simulator:
+For persisted tournaments, `auto_restart_games` must remain `false`.
+
+## Docker Workflow
+
+Docker is used only for PostgreSQL. The simulator service itself runs on the host machine and connects to the DB container through `PGN_DATABASE_URL`.
+
+1. Copy `.env.example` to `.env` if you want custom ports or credentials.
+
+2. Start the PostgreSQL container:
 
 ```bash
-# Using Poetry
-poetry run pgncreationsimulator --config config.yaml
-
-# Or directly with Python
-python -m pgncreationsimulator --config config.yaml
-
-# With verbose logging
-python -m pgncreationsimulator --config config.yaml --verbose
+docker compose up -d pgn_db
 ```
 
-3. Watch the PGN files update in real-time in the output directory.
+Or use the destructive reset/restart flow:
 
-4. Press `Ctrl+C` to stop the simulator gracefully.
+```bash
+./scripts/dev/clean_and_restart.sh
+```
 
-## Configuration
+3. Start the simulator service locally:
 
-The configuration file supports the following options:
+```bash
+./scripts/dev/start_server.sh
+```
 
-- `move_interval_seconds` (float): How often each board makes a move (in seconds)
-- `number_of_boards` (int): Number of parallel games to simulate
-- `max_moves_per_game` (int): Maximum half-moves before forced draw
-- `move_strategy` (str): Move selection strategy (`random`, `threefold_preclaim`, or `pgn_file`)
-- `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
-- `pgn_source_path` (str): Path to a PGN file to replay when using `pgn_file`
-- `pgn_game_index` (int): 1-based game index to replay from the PGN file
-- `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`)
-- `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config
-- `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and per-board `pgn_file` must resolve to an existing `pgn_source_path`
-- `output_directory` (str): Directory where PGN files are written
-- `event_name` (str): Event name for PGN headers
-- `site` (str): Site name for PGN headers
-- `round_number` (int): Active round to expose from server endpoints (`round-{round_number}`); `round_index` and `round` are also accepted aliases
-- `round_prefix` (str): Prefix for round/board identification
-- `auto_restart_games` (bool): Automatically start new games when one finishes
-- `use_single_tournament_file` (bool): Maintain a tournament.pgn file with all finished games
+4. Create and start tournaments locally:
 
-Example fallback behavior:
-- If board 1 is `random`, board 2 is `pgn_file`, and board 3 has no `move_strategy`, board 3 resolves to `pgn_file`.
-- If board 2 and board 3 both omit `move_strategy`, both resolve to board 1's strategy.
+```bash
+./scripts/dev/start.sh
+./scripts/dev/start_tournament.sh <uuid>
+./scripts/dev/stop_tournament.sh <uuid>
+./scripts/dev/update_tournament.sh <uuid>
+./scripts/dev/update_tournament.sh <uuid> config.yaml
+poetry run pgn-tournament status <uuid>
+```
 
-### Per-board override resolution
+All of those scripts source [source.sh](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.sh) or [source.ps1](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.ps1), which now read `.env` plus existing `PGN_POSTGRES_*` or `PGNSS_POSTGRES_*` variables so they point at the Dockerized PostgreSQL instance automatically.
 
-Each `board_configs` entry overrides only the fields you set. Any missing field inherits from the previous resolved board:
+## Local Workflow
 
-1. Board 1 starts from global defaults (`move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`).
-2. Board N (N > 1) starts from board N-1 resolved values.
-3. Values present in board N override that base.
+1. Start the PostgreSQL container:
 
-Notes:
-- If `board` is omitted in an entry, it defaults to that entry's 1-based list position.
-- Auto-restarted games keep the same resolved per-board settings as their board's initial game.
+```bash
+docker compose up -d pgn_db
+```
+
+2. Start the server:
+
+```bash
+./scripts/dev/start_server.sh
+```
+
+3. Create a stored tournament from a config file. This prints the generated UUID:
+
+```bash
+./scripts/dev/start.sh
+```
+
+Or directly:
+
+```bash
+source ./scripts/dev/source.sh
+poetry run pgn-tournament create --config config.yaml --start
+```
+
+4. Start a specific existing tournament:
+
+```bash
+./scripts/dev/start_tournament.sh <uuid>
+```
+
+Calling `start` for an existing UUID resets that tournament’s stored board state and generated output for that code, then starts all games again from move one.
+
+5. Stop a running tournament:
+
+```bash
+./scripts/dev/stop_tournament.sh <uuid>
+```
+
+6. Update the stored config for an existing stopped tournament:
+
+```bash
+./scripts/dev/update_tournament.sh <uuid>
+./scripts/dev/update_tournament.sh <uuid> config-round-2.yaml
+```
+
+Without a second argument, `update_tournament.sh` uses the project `config.yaml`. This replaces the stored YAML-derived config for that UUID, preserves previously stored games from other rounds, and leaves it ready to start again.
+
+7. Poll the tournament:
+
+```bash
+curl http://127.0.0.1:8006/get/<uuid>/tournament.json
+curl http://127.0.0.1:8006/get/<uuid>/round-1/index.json
+curl "http://127.0.0.1:8006/get/<uuid>/round-1/game-1.json?poll"
+```
+
+The server also accepts `/<uuid>/get/...` as an alias.
+
+## Legacy Single-Config Mode
+
+The old direct simulator mode still works:
+
+```bash
+poetry run pgncreationsimulator --config config.yaml
+```
+
+Or explicitly:
+
+```bash
+poetry run pgncreationsimulator simulate --config config.yaml
+```
+
+## Reset And Restart Scripts
+
+Destructive reset of the Dockerized PostgreSQL plus local runtime prerequisites:
+
+```bash
+./scripts/dev/clean_and_restart.sh
+```
+
+Windows:
+
+```powershell
+.\scripts\dev\clean_and_restart.ps1
+```
+
+Database and generated output reset only:
+
+```bash
+./scripts/dev/reset_database.sh
+```
+
+These scripts:
+
+- prompt for explicit confirmation
+- wipe generated output under `pgn_output`
+- run `docker compose down -v`
+- restart the PostgreSQL container
+- wait for PostgreSQL to become healthy
+- run the local reset command against that Dockerized database
+
+`scripts/dev/reset_database.sh` and `scripts/dev/reset_database.ps1` reset the running Dockerized database and wipe generated output without tearing the full stack down.
+
+## Configuration Notes
+
+- `board_configs` entries override only the fields you set
+- missing values for board `N` fall back to resolved values from board `N-1`
+- board `1` falls back to the global config
+- `round_number` is persisted per tournament and controls which `round-{n}` routes are live
+- `start <uuid>` clears persisted game state only when that UUID is being restarted for the same active round
+- `stop <uuid>` marks that tournament as stopped and the host server cancels the active runner on its next supervisor pass
+- `update <uuid> --config ...` requires the tournament to be stopped first, replaces the stored config, preserves previously stored games from other rounds, and resets the tournament to `created`
+
+## HTTP Endpoints
+
+- `GET /get/{code}/tournament.json`
+- `GET /get/{code}/round-{round_no}/index.json`
+- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll`
+- `GET /{code}/get/tournament.json`
+- `GET /{code}/get/round-{round_no}/index.json`
+- `GET /{code}/get/round-{round_no}/game-{board_no}.json?poll`
+- `GET /health`
+
+The `{code}` path segment is now meaningful and routes to the stored tournament with that UUID.
+
+## Database Model
+
+The simulator stores:
+
+- `tournaments`: tournament code, YAML-derived config, lifecycle status, timestamps, and error state
+- `tournament_games`: per-board JSON payload snapshots plus the latest PGN text
+
+When a tournament row is marked `running`, the server detects it and starts the simulator for that specific tournament.
 
 ## Output Files
 
-- `board_1.pgn`, `board_2.pgn`, etc.: Individual PGN files for each board, updated after every move
-- `tournament.pgn`: (if enabled) Contains all finished games, appended as they complete
+For each running tournament, the simulator writes:
 
-## Game Termination
-
-Games end when:
-- Checkmate occurs
-- Stalemate occurs
-- Insufficient material (draw)
-- 75-move rule (draw)
-- Fivefold repetition (draw)
-- Maximum move count is reached (draw)
-
-## PGN HTTP Server
-
-The project includes an HTTP server that serves PGN files in LiveChess Cloud JSON format, allowing the `event_download_manager` to poll it as if it were a real LiveChess Cloud instance.
-
-### Starting the Server
-
-```bash
-# Using Poetry
-poetry run pgn-server
-
-# Or directly with Python
-python -m pgncs.pgn_server
-
-# With custom configuration via environment variables
-PGN_OUTPUT_DIRECTORY=./pgn_output PGN_CONFIG_PATH=./config.yaml PGN_SERVER_HOST=127.0.0.1 PGN_SERVER_PORT=8000 poetry run pgn-server
-```
-
-### Server Endpoints
-
-The server provides endpoints matching the LiveChess Cloud API format:
-
-- `GET /get/{code}/tournament.json` - Tournament information
-- `GET /get/{code}/round-{round_no}/index.json` - Round pairings (served for configured `round_number` only)
-- `GET /get/{code}/round-{round_no}/game-{board_no}.json?poll` - Game data in JSON format (served for configured `round_number` only)
-- `GET /health` - Health check endpoint
-
-The `{code}` parameter is ignored but kept for API compatibility.
-
-### Configuration
-
-The server can be configured via environment variables:
-
-- `PGN_OUTPUT_DIRECTORY` - Directory to watch for PGN files (default: `./pgn_output`)
-- `PGN_CONFIG_PATH` - YAML config path used to load `round_number` (optional)
-- If `PGN_CONFIG_PATH` is not set, server checks `./config.yaml` and then `PGN-Streaming-Simulator/config.yaml`
-- `PGN_ACTIVE_ROUND` - Optional explicit round override (takes precedence over YAML)
-- `PGN_SERVER_HOST` - Server host (default: `127.0.0.1`)
-- `PGN_SERVER_PORT` - Server port (default: `8000`)
-
-### Usage with event_download_manager
-
-1. Start the PGN simulator:
-   ```bash
-   poetry run pgncreationsimulator --config config.yaml
-   ```
-
-2. Start the PGN server:
-   ```bash
-   poetry run pgn-server
-   ```
-
-3. Configure `event_download_manager` to use `http://127.0.0.1:8000/get/{code}/...` as the source URL instead of `https://1.pool.livechesscloud.com/get/{code}/...`
-
-The server automatically watches the PGN directory and serves updated game data in real-time.
-
-## Project Structure
-
-```
-pgncreationsimulator/
-├── src/
-│   └── pgncs/
-│       ├── __init__.py
-│       ├── config.py          # BaseSettings configuration class
-│       ├── game.py            # LiveGame class for individual games
-│       ├── manager.py          # GameManager for orchestrating games
-│       ├── writer.py           # PgnWriter for file operations
-│       ├── pgn_server.py       # HTTP server for serving PGN as JSON
-│       └── main.py             # Main entry point
-├── config.yaml                 # Sample configuration file
-├── pyproject.toml              # Poetry configuration
-└── README.md                   # This file
-```
+- `output_directory/<uuid>/board_1.pgn`, `board_2.pgn`, ...
+- `output_directory/<uuid>/tournament.pgn` when `use_single_tournament_file` is enabled
+- host `pgn_output/` files generated by the locally running `pgn-server`
 
 ## Integration with DMA and ES
 
-**1. Event Service (EVS) - Database & Coordination**
-- Tracks tournaments, games, and sources in a database
-- Identifies what needs to be downloaded via get_pending_download_requests()
-- Exposes API endpoint: GET /live_sources/downloads/pending
-- Consumes Redis streams to process incoming game data
-- Stores PGN files and runs arbiter analysis
+The server is shaped for the downloader stack in this repo:
 
-**2. Download Manager App (DMA) - Polling & Fetching**
-- Polls LiveChess Cloud endpoints for game data
-- Fetches PGN files and publishes updates to Redis streams
-- Two main components:
-- PresenceService: Polls based on arbiter presence
-- PendingDownloadService: Polls Event Service for backlog work
+- `download_manager_app` can poll `.../get/{code}/tournament.json`
+- `download_manager_app` can poll `.../get/{code}/round-{round_number}/index.json`
+- `download_manager_app` can poll `.../get/{code}/round-{round_number}/game-{board}.json?poll`
 
-**Summary**
-1. Event Service tracks what needs downloading (missing rounds/games)
-2. Download Manager polls Event Service for pending work
-3. Download Manager fetches data from LiveChess Cloud
-4. Download Manager publishes updates to Redis streams
-5. Event Service consumes streams and saves PGN files
-6. Event Service runs arbiter analysis and updates the database
-7. This decouples polling (EDM) from storage/processing (EVS) via Redis streams.
+## Project Structure
 
-## Requirements
-
-- Python 3.8+
-- python-chess library
-- PyYAML library
-- FastAPI (for PGN server)
-- uvicorn (for PGN server)
-- watchfiles (for PGN server file watching)
-
-## License
-
-This project is provided as-is for educational and demonstration purposes.
+```text
+PGN-Streaming-Simulator/
+├── src/
+│   └── pgncs/
+│       ├── config.py
+│       ├── database.py
+│       ├── game.py
+│       ├── livechess.py
+│       ├── manager.py
+│       ├── repository.py
+│       ├── runtime.py
+│       ├── writer.py
+│       ├── pgn_server.py
+│       └── main.py
+├── config.yaml
+├── docker-compose.yaml
+├── scripts/
+│   └── dev/
+│       ├── source.sh
+│       ├── source.ps1
+│       ├── start.sh
+│       ├── start.ps1
+│       ├── start_server.sh
+│       ├── start_server.ps1
+│       ├── start_tournament.sh
+│       ├── start_tournament.ps1
+│       ├── stop_tournament.sh
+│       ├── stop_tournament.ps1
+│       ├── update_tournament.sh
+│       ├── update_tournament.ps1
+│       ├── reset_database.sh
+│       ├── reset_database.ps1
+│       ├── clean_and_restart.sh
+│       └── clean_and_restart.ps1
+├── pyproject.toml
+└── README.md
+```
