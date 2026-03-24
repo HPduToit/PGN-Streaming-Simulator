@@ -13,9 +13,9 @@ if (Test-Path $EnvFile) {
     }
 }
 
-$env:PGN_POSTGRES_DB = if ($env:PGN_POSTGRES_DB) { $env:PGN_POSTGRES_DB } elseif ($env:PGNSS_POSTGRES_DB) { $env:PGNSS_POSTGRES_DB } else { "pgn_simulator" }
-$env:PGN_POSTGRES_USER = if ($env:PGN_POSTGRES_USER) { $env:PGN_POSTGRES_USER } elseif ($env:PGNSS_POSTGRES_USER) { $env:PGNSS_POSTGRES_USER } else { "postgres" }
-$env:PGN_POSTGRES_PASSWORD = if ($env:PGN_POSTGRES_PASSWORD) { $env:PGN_POSTGRES_PASSWORD } elseif ($env:PGNSS_POSTGRES_PASSWORD) { $env:PGNSS_POSTGRES_PASSWORD } else { "postgres" }
-$env:PGN_POSTGRES_PORT = if ($env:PGN_POSTGRES_PORT) { $env:PGN_POSTGRES_PORT } elseif ($env:PGNSS_POSTGRES_PORT) { $env:PGNSS_POSTGRES_PORT } else { "5432" }
+$env:PGN_POSTGRES_DB = if ($env:PGNSS_POSTGRES_DB) { $env:PGNSS_POSTGRES_DB } elseif ($env:PGN_POSTGRES_DB) { $env:PGN_POSTGRES_DB } else { "pgn_simulator" }
+$env:PGN_POSTGRES_USER = if ($env:PGNSS_POSTGRES_USER) { $env:PGNSS_POSTGRES_USER } elseif ($env:PGN_POSTGRES_USER) { $env:PGN_POSTGRES_USER } else { "postgres" }
+$env:PGN_POSTGRES_PASSWORD = if ($env:PGNSS_POSTGRES_PASSWORD) { $env:PGNSS_POSTGRES_PASSWORD } elseif ($env:PGN_POSTGRES_PASSWORD) { $env:PGN_POSTGRES_PASSWORD } else { "postgres" }
+$env:PGN_POSTGRES_PORT = if ($env:PGNSS_POSTGRES_PORT) { $env:PGNSS_POSTGRES_PORT } elseif ($env:PGN_POSTGRES_PORT) { $env:PGN_POSTGRES_PORT } else { "5432" }
 $env:PGN_SERVER_PORT = if ($env:PGN_SERVER_PORT) { $env:PGN_SERVER_PORT } else { "8006" }
 $env:PGN_DATABASE_URL = "postgresql://$($env:PGN_POSTGRES_USER):$($env:PGN_POSTGRES_PASSWORD)@127.0.0.1:$($env:PGN_POSTGRES_PORT)/$($env:PGN_POSTGRES_DB)"
