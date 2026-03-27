@@ -7,4 +7,4 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$SCRIPT_DIR/source.sh"
-poetry run pgn-tournament create --config config.yaml --start
+poetry run python -m pgncs.main create --config config.yaml --start

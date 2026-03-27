@@ -8,4 +8,4 @@ cd "$ROOT_DIR"
 
 source "$SCRIPT_DIR/source.sh"
 CONFIG_PATH="${2:-config.yaml}"
-poetry run pgn-tournament update "$1" --config "$CONFIG_PATH"
+poetry run python -m pgncs.main update "$1" --config "$CONFIG_PATH"

@@ -30,7 +30,7 @@ while true; do
     fi
 done
 
-poetry run pgn-tournament reset-db --yes --wipe-output
+poetry run python -m pgncs.main reset-db --yes --wipe-output
 
 echo "PostgreSQL is ready in container: pgn_db"
 echo "Start the local server with:"

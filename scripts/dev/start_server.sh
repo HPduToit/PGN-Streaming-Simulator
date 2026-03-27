@@ -7,4 +7,4 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$SCRIPT_DIR/source.sh"
-poetry run pgn-server
+poetry run python -m pgncs.pgn_server
