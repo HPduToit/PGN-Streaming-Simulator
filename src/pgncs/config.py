@@ -64,11 +64,49 @@ class BaseSettings:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         with open(path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        if data is None:
-            data = {}
+            raw_data = yaml.safe_load(f)
+        settings = cls._from_raw_data(raw_data, base_directory=path.parent)
+        return settings
 
-        # Accept round aliases used in some configs.
+    @classmethod
+    def from_yaml_text(
+        cls,
+        yaml_text: str,
+        *,
+        base_directory: Optional[Path] = None,
+    ) -> "BaseSettings":
+        """Load settings from YAML text."""
+        raw_data = yaml.safe_load(yaml_text)
+        return cls._from_raw_data(raw_data, base_directory=base_directory)
+
+    @classmethod
+    def _from_raw_data(
+        cls,
+        raw_data: Any,
+        *,
+        base_directory: Optional[Path],
+    ) -> "BaseSettings":
+        """Normalize raw config payload and build settings."""
+        data = cls._normalize_raw_data(raw_data)
+        settings = cls(**data)
+        settings.resolve_paths(base_directory=base_directory)
+        return settings
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "BaseSettings":
+        """Rehydrate settings from persisted data."""
+        payload = cls._normalize_raw_data(data)
+        settings = cls(**payload)
+        settings.resolve_paths(base_directory=None)
+        return settings
+
+    @staticmethod
+    def _normalize_raw_data(raw_data: Any) -> dict[str, Any]:
+        """Normalize raw YAML/dict config data into constructor kwargs."""
+        if raw_data is not None and not isinstance(raw_data, dict):
+            raise ValueError("Config payload must be a mapping")
+        data = dict(raw_data or {})
+
         round_value = data.get("round_number", data.get("round_index", data.get("round")))
         if round_value is not None:
             data["round_number"] = round_value
@@ -81,20 +119,8 @@ class BaseSettings:
         data.setdefault("pgn_game_index", 1)
         data.setdefault("round_number", 1)
         raw_board_configs = data.get("board_configs") or []
-        data["board_configs"] = cls._parse_board_configs(raw_board_configs)
-        settings = cls(**data)
-        settings.resolve_paths(base_directory=path.parent)
-        return settings
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "BaseSettings":
-        """Rehydrate settings from persisted data."""
-        payload = dict(data)
-        raw_board_configs = payload.get("board_configs") or []
-        payload["board_configs"] = cls._parse_board_configs(raw_board_configs)
-        settings = cls(**payload)
-        settings.resolve_paths(base_directory=None)
-        return settings
+        data["board_configs"] = BaseSettings._parse_board_configs(raw_board_configs)
+        return data
 
     @staticmethod
     def _parse_board_configs(raw_board_configs: Any) -> list[BoardOverrideSettings]:
@@ -222,6 +248,14 @@ class BaseSettings:
                 for override in self.board_configs
             ],
         }
+
+    def to_yaml(self) -> str:
+        """Serialize settings to YAML for the web editor and exports."""
+        return yaml.safe_dump(
+            self.to_dict(),
+            sort_keys=False,
+            allow_unicode=False,
+        )
 
     @staticmethod
     def _resolve_optional_path(path_value: str, base_directory: Optional[Path]) -> str:
