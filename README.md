@@ -27,22 +27,27 @@ For PostgreSQL-backed usage:
 When using the provided wrapper scripts, you can set the PostgreSQL connection pieces instead and let the scripts build `PGN_DATABASE_URL` automatically:
 
 ```env
-PGNSS_POSTGRES_DB=pgnss_db
-PGNSS_POSTGRES_USER=rtinstall
-PGNSS_POSTGRES_PASSWORD=N0Pa55wrd
-PGNSS_POSTGRES_PORT=50009
+PGNSS_MYSQL_DATABASE=pgnss_db
+PGNSS_MYSQL_HOST=127.0.0.1
+PGNSS_MYSQL_TCP_PORT=50009
+INSTALLER_USERID=rtinstall
+INSTALLER_PWD=N0Pa55wrd
+MYSQL_ROOT_USER=ursadmin
+MYSQL_ROOT_PASSWORD=AdminPassword
 PGN_SERVER_PORT=8006
 ```
 
-If `PGNSS_POSTGRES_*` are set in your shell or `.env`, [source.sh](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.sh) and [source.ps1](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.ps1) generate `PGN_DATABASE_URL` for you, so `PGN_DATABASE_URL` does not need to be set manually when you start the simulator through the provided scripts.
+`PGNSS_POSTGRES_*` remains accepted as a legacy alias, but the standardized deploy/bootstrap path now resolves through `PGNSS_MYSQL_*`, `INSTALLER_*`, and `MYSQL_ROOT_*` in the same style as `ums`.
+
+If those variables are set in your shell or `.env`, [source.sh](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.sh) and [source.ps1](/run/media/bob/Work/Coding_Projects/RTE/PGN-Streaming-Simulator/scripts/dev/source.ps1) generate `PGN_DATABASE_URL` for you, so `PGN_DATABASE_URL` does not need to be set manually when you start the simulator through the provided scripts.
 
 You can also directly set PGN_DATABASE_URL but this will create issues if the values aren't the same as in the docker compose file.
 
 ```bash
-export PGN_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pgn_simulator
+export PGN_DATABASE_URL=postgresql://rtinstall:N0Pa55wrd@127.0.0.1:5432/pgnss_db
 ```
 
-If `PGN_DATABASE_URL` is not set, the simulator uses a local SQLite database file.
+If `PGN_DATABASE_URL` is not set, the simulator uses a local SQLite database file. The PostgreSQL bootstrap flow is now available via `python -m pgncs.dbdef`.
 
 ## Config File
 

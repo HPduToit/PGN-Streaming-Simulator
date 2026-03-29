@@ -8,11 +8,17 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from .configs.settings import settings
 
-DEFAULT_DATABASE_URL = os.getenv(
-    "PGN_DATABASE_URL",
-    f"sqlite:///{(Path.cwd() / 'pgn_simulator.db').resolve()}",
-)
+
+def get_default_database_url() -> str:
+    configured_database_url = os.getenv("PGN_DATABASE_URL")
+    if configured_database_url not in (None, ""):
+        return configured_database_url
+    return settings.default_sqlite_database_url
+
+
+DEFAULT_DATABASE_URL = get_default_database_url()
 
 
 class Database:
@@ -61,4 +67,3 @@ class Database:
             connection.commit()
         finally:
             connection.close()
-

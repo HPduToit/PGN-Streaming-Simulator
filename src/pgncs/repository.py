@@ -10,6 +10,8 @@ from uuid import uuid4
 
 from .config import BaseSettings
 from .database import Database
+from .dbdef import create_tables as create_postgres_tables
+from .dbdef import reset_tables as reset_postgres_tables
 
 
 def utc_now_iso() -> str:
@@ -52,6 +54,10 @@ class TournamentRepository:
 
     def init_db(self) -> None:
         """Create required tables if they do not exist."""
+        if self.database.backend == "postgres":
+            create_postgres_tables()
+            return
+
         with self.database.connect() as connection:
             cursor = connection.cursor()
             cursor.execute(
@@ -87,6 +93,10 @@ class TournamentRepository:
 
     def reset_db(self) -> None:
         """Drop and recreate simulator tables."""
+        if self.database.backend == "postgres":
+            reset_postgres_tables()
+            return
+
         with self.database.connect() as connection:
             cursor = connection.cursor()
             cursor.execute("DROP TABLE IF EXISTS tournament_games")
