@@ -2,7 +2,13 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-if [[ -f "$ROOT_DIR/.env" ]]; then
+if [[ -f "$ROOT_DIR/.env" && ! -r "$ROOT_DIR/.env" ]]; then
+    echo "Environment file exists but is not readable: $ROOT_DIR/.env" >&2
+    echo "Fix the file permissions or run the script as a user that can read it." >&2
+    exit 1
+fi
+
+if [[ -r "$ROOT_DIR/.env" ]]; then
     set -a
     # shellcheck disable=SC1091
     source "$ROOT_DIR/.env"

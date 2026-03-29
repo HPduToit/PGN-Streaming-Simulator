@@ -445,7 +445,6 @@ class TournamentRepository:
         is_finished: bool,
         updated_at: str,
     ) -> tuple[str, tuple[Any, ...]]:
-        finished_flag = int(is_finished)
         if self.database.backend == "sqlite":
             return (
                 """
@@ -465,7 +464,7 @@ class TournamentRepository:
                     board_no,
                     payload_json,
                     pgn_text,
-                    finished_flag,
+                    int(is_finished),
                     updated_at,
                 ),
             )
@@ -487,7 +486,7 @@ class TournamentRepository:
                 board_no,
                 payload_json,
                 pgn_text,
-                finished_flag,
+                is_finished,
                 updated_at,
             ),
         )
