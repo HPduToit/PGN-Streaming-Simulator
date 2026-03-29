@@ -1,2 +1,4 @@
 pgn_output/*
 **/__pycache__/*
+.env*
+rondfok/

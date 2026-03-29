@@ -1,3 +1,7 @@
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RootDir = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
+Set-Location $RootDir
+
 Write-Host "--------------------------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host "Executing $PSCommandPath..." -ForegroundColor Yellow
 pip install --upgrade --force --no-cache-dir black

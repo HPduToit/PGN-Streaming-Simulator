@@ -86,3 +86,7 @@ class PgnWriter:
             logger.error(f"Error appending to tournament file: {e}")
             raise
 
+    def reset_tournament_file(self) -> None:
+        """Remove the aggregate tournament file before a new run starts."""
+        if self.tournament_file.exists():
+            self.tournament_file.unlink()

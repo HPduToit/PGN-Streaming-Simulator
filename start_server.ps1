@@ -1,1 +1,0 @@
-poetry run pgn-server

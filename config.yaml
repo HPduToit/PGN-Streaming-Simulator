@@ -32,15 +32,17 @@ pgn_game_index: 1
 # must resolve (either from that board override or inherited fallback/global default).
 board_configs:
   - board: 1
-    move_strategy: "random"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/5fold_rep.pgn"
   - board: 2
-    move_strategy: "random"
+    move_strategy: "pgn_file"
     pgn_source_path: "./pgn_input/5fold_rep.pgn"
   - board: 3
-    move_strategy: "random"
-    pgn_source_path: "./pgn_input/3fold_rep.pgn"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/3fold_rep_pawn_move_after_2nd_rep.pgn"
   - board: 4
-    move_strategy: "random"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/3fold_no_claim_after_2_plies.pgn"
 
 # Directory where PGN files will be written
 output_directory: "./pgn_output"

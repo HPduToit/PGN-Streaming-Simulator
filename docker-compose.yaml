@@ -1,0 +1,22 @@
+services:
+  pgn_db:
+    container_name: "pgn_db"
+    image: postgres:16
+    environment:
+      POSTGRES_DB: "${PGNSS_MYSQL_DATABASE:-${PGNSS_POSTGRES_DB:-pgnss_db}}"
+      POSTGRES_USER: "${INSTALLER_USERID:-${PGNSS_MYSQL_USER:-${PGNSS_POSTGRES_USER:-postgres}}}"
+      POSTGRES_PASSWORD: "${INSTALLER_PWD:-${PGNSS_MYSQL_PASSWORD:-${PGNSS_POSTGRES_PASSWORD:-postgres}}}"
+    ports:
+      - "${PGNSS_MYSQL_TCP_PORT:-${PGNSS_POSTGRES_PORT:-5432}}:5432"
+    volumes:
+      - pgn_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INSTALLER_USERID:-${PGNSS_MYSQL_USER:-${PGNSS_POSTGRES_USER:-postgres}}} -d ${PGNSS_MYSQL_DATABASE:-${PGNSS_POSTGRES_DB:-pgnss_db}}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+    cpus: 0.5
+
+volumes:
+  pgn_postgres_data:
