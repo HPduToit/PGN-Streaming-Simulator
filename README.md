@@ -64,6 +64,12 @@ pgn_game_index: 1
 board_configs:
   - board: 1
     move_strategy: "random"
+    move_interval_schedule:
+      - moves: 5
+        interval_seconds: 3
+      - moves: 5
+        interval_seconds: 2
+      - interval_seconds: 1
   - board: 2
     move_strategy: "pgn_file"
     pgn_source_path: "./pgn_input/5fold_rep.pgn"
@@ -107,15 +113,16 @@ Or use the destructive reset/restart flow:
 ./scripts/dev/start_server.sh
 ```
 
-- `move_interval_seconds` (float): How often each board makes a move (in seconds)
+- `move_interval_seconds` (float): Default interval for boards without a per-board move interval schedule
 - `number_of_boards` (int): Number of parallel games to simulate
 - `max_moves_per_game` (int): Maximum half-moves before forced draw
 - `move_strategy` (str): Move selection strategy (`random`, `threefold_preclaim`, or `pgn_file`)
 - `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
 - `pgn_source_path` (str): Global default PGN path for `pgn_file`; board 1 starts from this value and later boards may inherit it via fallback unless overridden in `board_configs`
 - `pgn_game_index` (int): Global default 1-based game index paired with `pgn_source_path` for `pgn_file`; also participates in board fallback
-- `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`)
-- `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config
+- `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`, `move_interval_schedule`)
+- `move_interval_schedule` (list): Optional per-board pacing schedule. Each entry has `interval_seconds` and optional `moves`; `moves` counts half-moves/plies. The final entry may omit `moves` to apply for the rest of the game. If all entries include `moves`, the final interval repeats after the listed segments.
+- `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config. `move_interval_schedule` is board-specific and does not cascade; boards without it use `move_interval_seconds`.
 - `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and any board that resolves to `pgn_file` must resolve to an existing `pgn_source_path` (direct override or inherited fallback)
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers

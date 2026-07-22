@@ -1,7 +1,7 @@
 # Chess Tournament Simulator Configuration
 # This file configures the behavior of the chess tournament simulator
 
-# How often each board should make a move (in seconds)
+# Default move interval for boards without a per-board schedule (in seconds)
 move_interval_seconds: 5
 
 # Number of parallel games/boards to simulate
@@ -28,12 +28,20 @@ pgn_game_index: 1
 # Optional per-board overrides.
 # Fallback rule: any missing field on board N inherits from resolved board N-1.
 # Board 1 inherits from global defaults above.
+# move_interval_schedule is board-specific and does not inherit. Its moves values
+# count half-moves/plies; omit moves on the final entry to apply it for the rest
+# of the game.
 # For any board that resolves to move_strategy: pgn_file, a non-empty pgn_source_path
 # must resolve (either from that board override or inherited fallback/global default).
 board_configs:
   - board: 1
     move_strategy: "pgn_file"
     pgn_source_path: "./pgn_input/U.S_Junior_B2_R7.pgn"
+    move_interval_schedule:
+      - moves: 86
+        interval_seconds: 0.5
+      - moves: 5
+        interval_seconds: 5
 
 # Directory where PGN files will be written
 output_directory: "./pgn_output"

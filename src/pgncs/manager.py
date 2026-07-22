@@ -5,6 +5,7 @@ from typing import List as List
 
 from .config import BaseSettings
 from .game import LiveGame
+from .timing import BoardMoveScheduler
 from .writer import PgnWriter
 
 
@@ -24,11 +25,13 @@ class GameManager:
         self.settings = settings
         self.writer = writer
         self.games: List[LiveGame] = []
+        self._move_scheduler = BoardMoveScheduler(self.settings)
         self._board_settings = {
             board_index: self.settings.get_board_settings(board_index)
             for board_index in range(1, self.settings.number_of_boards + 1)
         }
         self._initialize_games()
+        self._move_scheduler.reset(self.games)
 
     def _initialize_games(self) -> None:
         """Initialize all game instances."""
@@ -93,52 +96,68 @@ class GameManager:
         """Make one move for each active game."""
         for game in self.games:
             if not game.is_finished():
-                result = game.make_next_move()
-                if result.move:
-                    # Get move in SAN notation for logging
-                    move_san = game.get_last_move_san()
-                    # Calculate move number (full moves, not half-moves)
-                    # move_count is incremented after the move, so:
-                    # move_count 1 = white's first move (full move 1)
-                    # move_count 2 = black's first move (full move 1)
-                    # move_count 3 = white's second move (full move 2)
-                    full_move_num = (game.move_count + 1) // 2
-                    # Determine if it's a white or black move
-                    # Odd move_count = white move, even move_count = black move
-                    is_white_move = game.move_count % 2 == 1
-                    if is_white_move:
-                        logger.info(
-                            f"Board {game.board_index}: {full_move_num}. {move_san}"
-                        )
-                    else:
-                        logger.info(
-                            f"Board {game.board_index}: "
-                            f"{full_move_num}... {move_san}"
-                        )
+                self._advance_game(game)
 
-                    # Update PGN file
-                    self._write_game_pgn(game)
+    def make_due_moves(self) -> float:
+        """Make due moves and return seconds until the next board is due."""
+        active_games = [game for game in self.games if not game.is_finished()]
+        if not active_games:
+            return self.settings.move_interval_seconds
 
-                # Check if game finished after this move or strategy stop
-                if game.is_finished():
-                    result_string = game.get_result()
-                    reason = game.get_termination_reason()
-                    logger.info(
-                        f"Board {game.board_index}: Game finished - "
-                        f"result {result_string} ({reason})"
-                    )
+        for game in self._move_scheduler.due_games(active_games):
+            board_index = game.board_index
+            self._advance_game(game)
+            current_game = self.games[board_index - 1]
+            self._move_scheduler.schedule_after_turn(current_game)
 
-                    # Final PGN write with result
-                    self._write_game_pgn(game)
+        active_games = [game for game in self.games if not game.is_finished()]
+        if not active_games:
+            return self.settings.move_interval_seconds
 
-                    # Append to tournament file if enabled
-                    if self.settings.use_single_tournament_file:
-                        pgn_string = game.to_pgn_string()
-                        self.writer.append_tournament_pgn(pgn_string)
+        return self._move_scheduler.seconds_until_next_due(active_games)
 
-                    # Restart game if auto-restart is enabled
-                    if self.settings.auto_restart_games:
-                        self._restart_game(game.board_index)
+    def _advance_game(self, game: LiveGame) -> None:
+        result = game.make_next_move()
+        if result.move:
+            # Get move in SAN notation for logging
+            move_san = game.get_last_move_san()
+            # Calculate move number (full moves, not half-moves)
+            # move_count is incremented after the move, so:
+            # move_count 1 = white's first move (full move 1)
+            # move_count 2 = black's first move (full move 1)
+            # move_count 3 = white's second move (full move 2)
+            full_move_num = (game.move_count + 1) // 2
+            # Determine if it's a white or black move
+            # Odd move_count = white move, even move_count = black move
+            is_white_move = game.move_count % 2 == 1
+            if is_white_move:
+                logger.info(f"Board {game.board_index}: {full_move_num}. {move_san}")
+            else:
+                logger.info(f"Board {game.board_index}: {full_move_num}... {move_san}")
+
+            # Update PGN file
+            self._write_game_pgn(game)
+
+        # Check if game finished after this move or strategy stop
+        if game.is_finished():
+            result_string = game.get_result()
+            reason = game.get_termination_reason()
+            logger.info(
+                f"Board {game.board_index}: Game finished - "
+                f"result {result_string} ({reason})"
+            )
+
+            # Final PGN write with result
+            self._write_game_pgn(game)
+
+            # Append to tournament file if enabled
+            if self.settings.use_single_tournament_file:
+                pgn_string = game.to_pgn_string()
+                self.writer.append_tournament_pgn(pgn_string)
+
+            # Restart game if auto-restart is enabled
+            if self.settings.auto_restart_games:
+                self._restart_game(game.board_index)
 
     def shutdown(self) -> None:
         """Gracefully shutdown, ensuring all PGN files are written."""

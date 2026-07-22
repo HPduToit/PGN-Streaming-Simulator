@@ -121,8 +121,7 @@ def legacy_main(argv: list[str]) -> None:
     logger.info("Starting tournament simulation...")
     try:
         while True:
-            manager.make_moves()
-            time.sleep(settings.move_interval_seconds)
+            time.sleep(manager.make_due_moves())
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
         manager.shutdown()

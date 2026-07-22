@@ -9,6 +9,7 @@ from pathlib import Path
 from .game import LiveGame
 from .livechess import build_game_payload
 from .repository import StoredTournament, TournamentRepository
+from .timing import BoardMoveScheduler
 from .writer import PgnWriter
 
 
@@ -40,6 +41,8 @@ class TournamentRunner:
 
     async def run(self) -> None:
         games = self._build_games()
+        scheduler = BoardMoveScheduler(self.settings)
+        scheduler.reset(games)
         self._writer.reset_tournament_file()
         try:
             for game in games:
@@ -52,7 +55,12 @@ class TournamentRunner:
                     self.repository.mark_tournament_finished(self.code)
                     return
 
-                for game in active_games:
+                due_games = scheduler.due_games(active_games)
+                if not due_games:
+                    await asyncio.sleep(scheduler.seconds_until_next_due(active_games))
+                    continue
+
+                for game in due_games:
                     result = game.make_next_move()
                     if result.move is not None:
                         logger.info(
@@ -67,7 +75,7 @@ class TournamentRunner:
                     if game.is_finished() and self.settings.use_single_tournament_file:
                         self._writer.append_tournament_pgn(game.to_pgn_string())
 
-                await asyncio.sleep(self.settings.move_interval_seconds)
+                    scheduler.schedule_after_turn(game)
         except asyncio.CancelledError:
             logger.info("Tournament %s cancelled", self.code)
             raise

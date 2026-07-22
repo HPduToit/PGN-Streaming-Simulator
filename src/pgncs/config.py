@@ -1,5 +1,6 @@
 """Configuration management for the chess tournament simulator."""
 
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any as Any, Dict as Dict, Optional as Optional
@@ -11,6 +12,14 @@ ALLOWED_MOVE_STRATEGIES: set[str] = {"random", "threefold_preclaim", "pgn_file"}
 
 
 @dataclass
+class MoveIntervalScheduleEntry:
+    """One segment of a per-board move interval schedule."""
+
+    interval_seconds: float
+    moves: Optional[int] = None
+
+
+@dataclass
 class BoardOverrideSettings:
     """Per-board override settings from YAML."""
 
@@ -19,6 +28,7 @@ class BoardOverrideSettings:
     pgn_source_path: Optional[str] = None
     pgn_game_index: Optional[int] = None
     threefold_stop_preclaim: Optional[bool] = None
+    move_interval_schedule: Optional[list[MoveIntervalScheduleEntry]] = None
 
 
 @dataclass
@@ -29,6 +39,7 @@ class BoardRuntimeSettings:
     pgn_source_path: Optional[str]
     pgn_game_index: int
     threefold_stop_preclaim: bool
+    move_interval_schedule: Optional[list[MoveIntervalScheduleEntry]]
 
 
 @dataclass
@@ -146,8 +157,85 @@ class BaseSettings:
                     pgn_source_path=item.get("pgn_source_path"),
                     pgn_game_index=item.get("pgn_game_index"),
                     threefold_stop_preclaim=item.get("threefold_stop_preclaim"),
+                    move_interval_schedule=BaseSettings._parse_move_interval_schedule(
+                        item.get("move_interval_schedule"),
+                        board_config_index=idx - 1,
+                    ),
                 )
             )
+        return parsed
+
+    @staticmethod
+    def _parse_move_interval_schedule(
+        raw_schedule: Any,
+        *,
+        board_config_index: int,
+    ) -> Optional[list[MoveIntervalScheduleEntry]]:
+        """Parse a board's optional move interval schedule."""
+        if raw_schedule is None:
+            return None
+        if not isinstance(raw_schedule, list):
+            raise ValueError(
+                f"board_configs[{board_config_index}].move_interval_schedule must be a list"
+            )
+        if not raw_schedule:
+            raise ValueError(
+                f"board_configs[{board_config_index}].move_interval_schedule cannot be empty"
+            )
+
+        parsed: list[MoveIntervalScheduleEntry] = []
+        for idx, item in enumerate(raw_schedule, start=1):
+            schedule_index = idx - 1
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"board_configs[{board_config_index}].move_interval_schedule"
+                    f"[{schedule_index}] must be a mapping"
+                )
+            if "interval_seconds" not in item:
+                raise ValueError(
+                    f"board_configs[{board_config_index}].move_interval_schedule"
+                    f"[{schedule_index}].interval_seconds is required"
+                )
+
+            interval_value = item["interval_seconds"]
+            if isinstance(interval_value, bool):
+                raise ValueError(
+                    f"board_configs[{board_config_index}].move_interval_schedule"
+                    f"[{schedule_index}].interval_seconds must be a number"
+                )
+            try:
+                interval_seconds = float(interval_value)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"board_configs[{board_config_index}].move_interval_schedule"
+                    f"[{schedule_index}].interval_seconds must be a number"
+                ) from None
+
+            moves_value = item.get("moves")
+            moves: Optional[int] = None
+            if moves_value is not None:
+                if isinstance(moves_value, bool) or (
+                    isinstance(moves_value, float) and not moves_value.is_integer()
+                ):
+                    raise ValueError(
+                        f"board_configs[{board_config_index}].move_interval_schedule"
+                        f"[{schedule_index}].moves must be an integer"
+                    )
+                try:
+                    moves = int(moves_value)
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        f"board_configs[{board_config_index}].move_interval_schedule"
+                        f"[{schedule_index}].moves must be an integer"
+                    ) from None
+
+            parsed.append(
+                MoveIntervalScheduleEntry(
+                    moves=moves,
+                    interval_seconds=interval_seconds,
+                )
+            )
+
         return parsed
 
     def _resolve_board_settings(self) -> Dict[int, BoardRuntimeSettings]:
@@ -164,6 +252,7 @@ class BaseSettings:
                     pgn_source_path=self.pgn_source_path,
                     pgn_game_index=self.pgn_game_index,
                     threefold_stop_preclaim=self.threefold_stop_preclaim,
+                    move_interval_schedule=None,
                 )
             )
             override = overrides_by_board.get(board_index)
@@ -188,6 +277,11 @@ class BaseSettings:
                     if override and override.threefold_stop_preclaim is not None
                     else base.threefold_stop_preclaim
                 ),
+                move_interval_schedule=(
+                    override.move_interval_schedule
+                    if override and override.move_interval_schedule is not None
+                    else None
+                ),
             )
         return resolved
 
@@ -200,6 +294,27 @@ class BaseSettings:
         if not self._resolved_board_settings:
             self._resolved_board_settings = self._resolve_board_settings()
         return self._resolved_board_settings[board_index]
+
+    def get_move_interval_seconds(self, board_index: int, completed_moves: int) -> float:
+        """Return the interval before a board's next move."""
+        if completed_moves < 0:
+            raise ValueError("completed_moves must be >= 0")
+
+        board_settings = self.get_board_settings(board_index)
+        schedule = board_settings.move_interval_schedule
+        if not schedule:
+            return self.move_interval_seconds
+
+        next_move_number = completed_moves + 1
+        covered_moves = 0
+        for entry in schedule:
+            if entry.moves is None:
+                return entry.interval_seconds
+            covered_moves += entry.moves
+            if next_move_number <= covered_moves:
+                return entry.interval_seconds
+
+        return schedule[-1].interval_seconds
 
     def resolve_paths(self, base_directory: Optional[Path]) -> None:
         """Resolve relative PGN and output paths against the config file directory."""
@@ -244,6 +359,17 @@ class BaseSettings:
                     "pgn_source_path": override.pgn_source_path,
                     "pgn_game_index": override.pgn_game_index,
                     "threefold_stop_preclaim": override.threefold_stop_preclaim,
+                    "move_interval_schedule": (
+                        [
+                            {
+                                "moves": entry.moves,
+                                "interval_seconds": entry.interval_seconds,
+                            }
+                            for entry in override.move_interval_schedule
+                        ]
+                        if override.move_interval_schedule is not None
+                        else None
+                    ),
                 }
                 for override in self.board_configs
             ],
@@ -316,6 +442,7 @@ class BaseSettings:
                 raise ValueError(
                     f"pgn_game_index must be >= 1 in board_configs for board {cfg.board}"
                 )
+            self._validate_move_interval_schedule(cfg)
 
         self._resolved_board_settings = self._resolve_board_settings()
         for board_index, board_cfg in self._resolved_board_settings.items():
@@ -339,3 +466,28 @@ class BaseSettings:
                         f"pgn_source_path not found for board {board_index}: "
                         f"{board_cfg.pgn_source_path}"
                     )
+
+    @staticmethod
+    def _validate_move_interval_schedule(cfg: BoardOverrideSettings) -> None:
+        if cfg.move_interval_schedule is None:
+            return
+
+        last_index = len(cfg.move_interval_schedule) - 1
+        for idx, entry in enumerate(cfg.move_interval_schedule):
+            if not math.isfinite(entry.interval_seconds) or entry.interval_seconds <= 0:
+                raise ValueError(
+                    "move_interval_schedule interval_seconds must be > 0 "
+                    f"in board_configs for board {cfg.board}"
+                )
+            if entry.moves is None:
+                if idx != last_index:
+                    raise ValueError(
+                        "Only the final move_interval_schedule entry may omit moves "
+                        f"in board_configs for board {cfg.board}"
+                    )
+                continue
+            if entry.moves <= 0:
+                raise ValueError(
+                    "move_interval_schedule moves must be >= 1 "
+                    f"in board_configs for board {cfg.board}"
+                )
