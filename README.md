@@ -12,6 +12,7 @@ A Python-based chess tournament simulator that stores tournament configs in a da
 - Runs multiple tournaments concurrently from one FastAPI server process
 - Serves `tournament.json`, `round-{n}/index.json`, and `game-{board}.json?poll` per tournament code
 - Emits DGT-style LiveChess move entries with remaining-clock and elapsed-move suffixes
+- Supports fixed or randomized per-move timing
 - Writes per-board PGN files under `output_directory/<uuid>/`
 - Stops a tournament automatically when all boards finish
 - Includes destructive clean/reset/restart scripts similar to UMS
@@ -56,6 +57,8 @@ Example `config.yaml`:
 
 ```yaml
 move_interval_seconds: 2.0
+move_interval_seconds_min: 5
+move_interval_seconds_max: 8
 number_of_boards: 4
 max_moves_per_game: 200
 move_strategy: "random"
@@ -70,7 +73,8 @@ board_configs:
     move_strategy: "random"
     move_interval_schedule:
       - moves: 5
-        interval_seconds: 3
+        interval_seconds_min: 5
+        interval_seconds_max: 8
       - moves: 5
         interval_seconds: 2
       - interval_seconds: 1
@@ -117,7 +121,8 @@ Or use the destructive reset/restart flow:
 ./scripts/dev/start_server.sh
 ```
 
-- `move_interval_seconds` (float): Default interval for boards without a per-board move interval schedule
+- `move_interval_seconds` (float): Default fixed interval for boards without a per-board move interval schedule
+- `move_interval_seconds_min` / `move_interval_seconds_max` (float): Optional default randomized interval range for boards without a per-board schedule. Set both fields to sample a new value for each move.
 - `number_of_boards` (int): Number of parallel games to simulate
 - `max_moves_per_game` (int): Maximum half-moves before forced draw
 - `move_strategy` (str): Move selection strategy (`random`, `threefold_preclaim`, or `pgn_file`)
@@ -128,7 +133,7 @@ Or use the destructive reset/restart flow:
 - `initial_clock_seconds` (int): Additional starting clock seconds, from `0` to `59`
 - `clock_increment_seconds` (int): Increment added to the player after each move
 - `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`, `move_interval_schedule`)
-- `move_interval_schedule` (list): Optional per-board pacing schedule. Each entry has `interval_seconds` and optional `moves`; `moves` counts half-moves/plies. The final entry may omit `moves` to apply for the rest of the game. If all entries include `moves`, the final interval repeats after the listed segments.
+- `move_interval_schedule` (list): Optional per-board pacing schedule. Each entry has optional `moves` plus either fixed `interval_seconds` or randomized `interval_seconds_min` / `interval_seconds_max`; `moves` counts half-moves/plies. The final entry may omit `moves` to apply for the rest of the game. If all entries include `moves`, the final interval repeats after the listed segments.
 - `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config. `move_interval_schedule` is board-specific and does not cascade; boards without it use `move_interval_seconds`.
 - `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and any board that resolves to `pgn_file` must resolve to an existing `pgn_source_path` (direct override or inherited fallback)
 - `output_directory` (str): Directory where PGN files are written
@@ -265,6 +270,7 @@ These scripts:
 - `board_configs` entries override only the fields you set
 - missing values for board `N` fall back to resolved values from board `N-1`
 - board `1` falls back to the global config
+- the first move and every later move use the configured fixed or randomized interval
 - `round_number` is persisted per tournament and controls which `round-{n}` routes are live
 - `start <uuid>` clears persisted game state only when that UUID is being restarted for the same active round
 - `stop <uuid>` marks that tournament as stopped and the host server cancels the active runner on its next supervisor pass

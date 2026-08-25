@@ -26,7 +26,13 @@ class BoardMoveScheduler:
         self._next_due_at: dict[int, float] = {}
 
     def reset(self, games: Iterable[LiveGame]) -> None:
-        self._next_due_at = {game.board_index: 0.0 for game in games}
+        now = self._current_time()
+        self._next_due_at = {
+            game.board_index: now
+            + self.settings.get_move_interval_seconds(game.board_index, 0)
+            for game in games
+            if not game.is_finished()
+        }
 
     def due_games(self, games: Iterable[LiveGame]) -> list[LiveGame]:
         now = self._current_time()

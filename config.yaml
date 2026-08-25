@@ -37,7 +37,8 @@ clock_increment_seconds: 30
 # Board 1 inherits from global defaults above.
 # move_interval_schedule is board-specific and does not inherit. Its moves values
 # count half-moves/plies; omit moves on the final entry to apply it for the rest
-# of the game.
+# of the game. Use interval_seconds for fixed timing, or interval_seconds_min
+# and interval_seconds_max for randomized timing.
 # For any board that resolves to move_strategy: pgn_file, a non-empty pgn_source_path
 # must resolve (either from that board override or inherited fallback/global default).
 board_configs:
@@ -46,25 +47,29 @@ board_configs:
     pgn_source_path: "./pgn_input/3fold_rep.pgn"
     move_interval_schedule:
       - moves: 300
-        interval_seconds: 5
+        interval_seconds_min: 5
+        interval_seconds_max: 10
   - board: 2
     move_strategy: "random"
     pgn_source_path: "./pgn_input/3fold_rep.pgn"
     move_interval_schedule:
       - moves: 300
-        interval_seconds: 5
+        interval_seconds_min: 5
+        interval_seconds_max: 10
   - board: 3
     move_strategy: "random"
     pgn_source_path: "./pgn_input/US_Junior_b5_r8.pgn"
     move_interval_schedule:
       - moves: 300
-        interval_seconds: 5
+        interval_seconds_min: 5
+        interval_seconds_max: 10
   - board: 4
     move_strategy: "random"
     pgn_source_path: "./pgn_input/US_Junior_b5_r8.pgn"
     move_interval_schedule:
       - moves: 300
-        interval_seconds: 5
+        interval_seconds_min: 5
+        interval_seconds_max: 10
 
 # Directory where PGN files will be written
 output_directory: "./pgn_output"

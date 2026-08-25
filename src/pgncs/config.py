@@ -1,6 +1,7 @@
 """Configuration management for the chess tournament simulator."""
 
 import math
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any as Any, Dict as Dict, Optional as Optional
@@ -38,8 +39,24 @@ UniqueKeySafeLoader.add_constructor(
 class MoveIntervalScheduleEntry:
     """One segment of a per-board move interval schedule."""
 
-    interval_seconds: float
+    interval_seconds: Optional[float] = None
+    interval_seconds_min: Optional[float] = None
+    interval_seconds_max: Optional[float] = None
     moves: Optional[int] = None
+
+    def sample_interval_seconds(self) -> float:
+        """Return a fixed or randomized interval for this schedule entry."""
+        if (
+            self.interval_seconds_min is not None
+            and self.interval_seconds_max is not None
+        ):
+            return random.uniform(
+                self.interval_seconds_min,
+                self.interval_seconds_max,
+            )
+        if self.interval_seconds is None:
+            raise ValueError("interval_seconds is required")
+        return self.interval_seconds
 
 
 @dataclass
@@ -73,6 +90,8 @@ class BaseSettings:
     number_of_boards: int
     max_moves_per_game: int
     move_strategy: str = "random"
+    move_interval_seconds_min: Optional[float] = None
+    move_interval_seconds_max: Optional[float] = None
     threefold_stop_preclaim: bool = True
     pgn_source_path: Optional[str] = None
     pgn_game_index: int = 1
@@ -219,25 +238,48 @@ class BaseSettings:
                     f"board_configs[{board_config_index}].move_interval_schedule"
                     f"[{schedule_index}] must be a mapping"
                 )
-            if "interval_seconds" not in item:
+            has_fixed_interval = item.get("interval_seconds") is not None
+            has_min_interval = item.get("interval_seconds_min") is not None
+            has_max_interval = item.get("interval_seconds_max") is not None
+            if has_fixed_interval and (has_min_interval or has_max_interval):
                 raise ValueError(
                     f"board_configs[{board_config_index}].move_interval_schedule"
-                    f"[{schedule_index}].interval_seconds is required"
+                    f"[{schedule_index}] must use interval_seconds or "
+                    "interval_seconds_min/interval_seconds_max, not both"
+                )
+            if not has_fixed_interval and not (has_min_interval and has_max_interval):
+                raise ValueError(
+                    f"board_configs[{board_config_index}].move_interval_schedule"
+                    f"[{schedule_index}] requires interval_seconds or both "
+                    "interval_seconds_min and interval_seconds_max"
                 )
 
-            interval_value = item["interval_seconds"]
-            if isinstance(interval_value, bool):
-                raise ValueError(
-                    f"board_configs[{board_config_index}].move_interval_schedule"
-                    f"[{schedule_index}].interval_seconds must be a number"
+            interval_seconds: Optional[float] = None
+            interval_seconds_min: Optional[float] = None
+            interval_seconds_max: Optional[float] = None
+            field_prefix = (
+                f"board_configs[{board_config_index}].move_interval_schedule"
+                f"[{schedule_index}]"
+            )
+            if has_fixed_interval:
+                interval_seconds = BaseSettings._parse_positive_seconds(
+                    item["interval_seconds"],
+                    f"{field_prefix}.interval_seconds",
                 )
-            try:
-                interval_seconds = float(interval_value)
-            except (TypeError, ValueError):
-                raise ValueError(
-                    f"board_configs[{board_config_index}].move_interval_schedule"
-                    f"[{schedule_index}].interval_seconds must be a number"
-                ) from None
+            else:
+                interval_seconds_min = BaseSettings._parse_positive_seconds(
+                    item["interval_seconds_min"],
+                    f"{field_prefix}.interval_seconds_min",
+                )
+                interval_seconds_max = BaseSettings._parse_positive_seconds(
+                    item["interval_seconds_max"],
+                    f"{field_prefix}.interval_seconds_max",
+                )
+                if interval_seconds_min > interval_seconds_max:
+                    raise ValueError(
+                        f"{field_prefix}.interval_seconds_min must be <= "
+                        "interval_seconds_max"
+                    )
 
             moves_value = item.get("moves")
             moves: Optional[int] = None
@@ -261,6 +303,8 @@ class BaseSettings:
                 MoveIntervalScheduleEntry(
                     moves=moves,
                     interval_seconds=interval_seconds,
+                    interval_seconds_min=interval_seconds_min,
+                    interval_seconds_max=interval_seconds_max,
                 )
             )
 
@@ -333,18 +377,18 @@ class BaseSettings:
         board_settings = self.get_board_settings(board_index)
         schedule = board_settings.move_interval_schedule
         if not schedule:
-            return self.move_interval_seconds
+            return self._sample_default_move_interval_seconds()
 
         next_move_number = completed_moves + 1
         covered_moves = 0
         for entry in schedule:
             if entry.moves is None:
-                return entry.interval_seconds
+                return entry.sample_interval_seconds()
             covered_moves += entry.moves
             if next_move_number <= covered_moves:
-                return entry.interval_seconds
+                return entry.sample_interval_seconds()
 
-        return schedule[-1].interval_seconds
+        return schedule[-1].sample_interval_seconds()
 
     def resolve_paths(self, base_directory: Optional[Path]) -> None:
         """Resolve relative PGN and output paths against the config file directory."""
@@ -369,6 +413,8 @@ class BaseSettings:
         """Convert settings to plain data for persistence."""
         return {
             "move_interval_seconds": self.move_interval_seconds,
+            "move_interval_seconds_min": self.move_interval_seconds_min,
+            "move_interval_seconds_max": self.move_interval_seconds_max,
             "number_of_boards": self.number_of_boards,
             "max_moves_per_game": self.max_moves_per_game,
             "move_strategy": self.move_strategy,
@@ -397,6 +443,8 @@ class BaseSettings:
                             {
                                 "moves": entry.moves,
                                 "interval_seconds": entry.interval_seconds,
+                                "interval_seconds_min": entry.interval_seconds_min,
+                                "interval_seconds_max": entry.interval_seconds_max,
                             }
                             for entry in override.move_interval_schedule
                         ]
@@ -432,6 +480,11 @@ class BaseSettings:
 
     def validate(self) -> None:
         """Validate configuration values."""
+        self.move_interval_seconds = self._parse_positive_seconds(
+            self.move_interval_seconds,
+            "move_interval_seconds",
+        )
+        self._validate_default_move_interval_range()
         if self.move_interval_seconds <= 0:
             raise ValueError("move_interval_seconds must be > 0")
         if self.number_of_boards <= 0:
@@ -513,10 +566,10 @@ class BaseSettings:
 
         last_index = len(cfg.move_interval_schedule) - 1
         for idx, entry in enumerate(cfg.move_interval_schedule):
-            if not math.isfinite(entry.interval_seconds) or entry.interval_seconds <= 0:
-                raise ValueError(
-                    "move_interval_schedule interval_seconds must be > 0 "
-                    f"in board_configs for board {cfg.board}"
+            if entry.interval_seconds is not None:
+                BaseSettings._parse_positive_seconds(
+                    entry.interval_seconds,
+                    f"move_interval_schedule interval_seconds in board_configs for board {cfg.board}",
                 )
             if entry.moves is None:
                 if idx != last_index:
@@ -564,3 +617,50 @@ class BaseSettings:
 
         if self.clock_increment_seconds < 0:
             raise ValueError("clock_increment_seconds must be >= 0")
+
+    def _sample_default_move_interval_seconds(self) -> float:
+        if (
+            self.move_interval_seconds_min is not None
+            and self.move_interval_seconds_max is not None
+        ):
+            return random.uniform(
+                self.move_interval_seconds_min,
+                self.move_interval_seconds_max,
+            )
+        return self.move_interval_seconds
+
+    def _validate_default_move_interval_range(self) -> None:
+        has_min = self.move_interval_seconds_min is not None
+        has_max = self.move_interval_seconds_max is not None
+        if has_min != has_max:
+            raise ValueError(
+                "move_interval_seconds_min and move_interval_seconds_max must be set together"
+            )
+        if not has_min:
+            return
+
+        self.move_interval_seconds_min = self._parse_positive_seconds(
+            self.move_interval_seconds_min,
+            "move_interval_seconds_min",
+        )
+        self.move_interval_seconds_max = self._parse_positive_seconds(
+            self.move_interval_seconds_max,
+            "move_interval_seconds_max",
+        )
+        if self.move_interval_seconds_min > self.move_interval_seconds_max:
+            raise ValueError(
+                "move_interval_seconds_min must be <= move_interval_seconds_max"
+            )
+
+    @staticmethod
+    def _parse_positive_seconds(value: Any, field_name: str) -> float:
+        if isinstance(value, bool):
+            raise ValueError(f"{field_name} must be a number")
+        try:
+            seconds = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{field_name} must be a number") from None
+
+        if not math.isfinite(seconds) or seconds <= 0:
+            raise ValueError(f"{field_name} must be > 0")
+        return seconds

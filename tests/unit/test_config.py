@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from textwrap import dedent
+from unittest.mock import patch
 
 from pgncs.config import BaseSettings
 
@@ -109,6 +110,82 @@ class TestInitialClockConfig(unittest.TestCase):
 
 
 class TestMoveIntervalScheduleConfig(unittest.TestCase):
+    def test_global_move_interval_range_samples_each_move(self) -> None:
+        settings = BaseSettings.from_yaml_text(dedent("""
+                move_interval_seconds: 5
+                move_interval_seconds_min: 5
+                move_interval_seconds_max: 8
+                number_of_boards: 1
+                max_moves_per_game: 20
+                """))
+        settings.validate()
+
+        with patch("pgncs.config.random.uniform", return_value=6.25) as uniform:
+            self.assertEqual(settings.get_move_interval_seconds(1, 0), 6.25)
+
+        uniform.assert_called_once_with(5.0, 8.0)
+
+    def test_board_schedule_can_sample_interval_range(self) -> None:
+        settings = BaseSettings.from_yaml_text(dedent("""
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                board_configs:
+                  - board: 1
+                    move_interval_schedule:
+                      - moves: 5
+                        interval_seconds_min: 5
+                        interval_seconds_max: 8
+                """))
+        settings.validate()
+
+        rehydrated = BaseSettings.from_dict(settings.to_dict())
+        rehydrated.validate()
+
+        with patch("pgncs.config.random.uniform", return_value=7.5) as uniform:
+            self.assertEqual(rehydrated.get_move_interval_seconds(1, 0), 7.5)
+
+        uniform.assert_called_once_with(5.0, 8.0)
+
+    def test_invalid_global_move_interval_range_is_rejected(self) -> None:
+        cases = [
+            (
+                """
+                move_interval_seconds: 5
+                move_interval_seconds_min: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                """,
+                "must be set together",
+            ),
+            (
+                """
+                move_interval_seconds: 5
+                move_interval_seconds_min: 8
+                move_interval_seconds_max: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                """,
+                "move_interval_seconds_min must be <= move_interval_seconds_max",
+            ),
+            (
+                """
+                move_interval_seconds: 5
+                move_interval_seconds_min: true
+                move_interval_seconds_max: 8
+                number_of_boards: 1
+                max_moves_per_game: 20
+                """,
+                "move_interval_seconds_min must be a number",
+            ),
+        ]
+
+        for yaml_text, expected_message in cases:
+            with self.subTest(expected_message=expected_message):
+                with self.assertRaisesRegex(ValueError, expected_message):
+                    settings = BaseSettings.from_yaml_text(dedent(yaml_text))
+                    settings.validate()
+
     def test_board_schedule_selects_interval_for_next_move(self) -> None:
         settings = BaseSettings.from_yaml_text(dedent("""
                 move_interval_seconds: 5
@@ -238,6 +315,48 @@ class TestMoveIntervalScheduleConfig(unittest.TestCase):
                         interval_seconds: true
                 """,
                 "interval_seconds must be a number",
+            ),
+            (
+                """
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                board_configs:
+                  - board: 1
+                    move_interval_schedule:
+                      - moves: 5
+                        interval_seconds_min: 5
+                """,
+                "requires interval_seconds or both interval_seconds_min and interval_seconds_max",
+            ),
+            (
+                """
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                board_configs:
+                  - board: 1
+                    move_interval_schedule:
+                      - moves: 5
+                        interval_seconds: 5
+                        interval_seconds_min: 5
+                        interval_seconds_max: 8
+                """,
+                "must use interval_seconds or interval_seconds_min/interval_seconds_max, not both",
+            ),
+            (
+                """
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                board_configs:
+                  - board: 1
+                    move_interval_schedule:
+                      - moves: 5
+                        interval_seconds_min: 8
+                        interval_seconds_max: 5
+                """,
+                "interval_seconds_min must be <= interval_seconds_max",
             ),
             (
                 """

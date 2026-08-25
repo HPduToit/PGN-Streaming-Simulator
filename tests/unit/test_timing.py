@@ -25,9 +25,7 @@ class FakeGame:
 
 class TestBoardMoveScheduler(unittest.TestCase):
     def test_scheduler_tracks_due_times_per_board(self) -> None:
-        settings = BaseSettings.from_yaml_text(
-            dedent(
-                """
+        settings = BaseSettings.from_yaml_text(dedent("""
                 move_interval_seconds: 5
                 number_of_boards: 2
                 max_moves_per_game: 20
@@ -38,9 +36,7 @@ class TestBoardMoveScheduler(unittest.TestCase):
                         interval_seconds: 3
                       - moves: 5
                         interval_seconds: 2
-                """
-            )
-        )
+                """))
         settings.validate()
 
         current_time = 100.0
@@ -52,13 +48,7 @@ class TestBoardMoveScheduler(unittest.TestCase):
         scheduler = BoardMoveScheduler(settings, now=now)
         scheduler.reset(games)
 
-        self.assertEqual([game.board_index for game in scheduler.due_games(games)], [1, 2])
-
-        games[0].move_count = 1
-        scheduler.schedule_after_turn(games[0])
-        games[1].move_count = 1
-        scheduler.schedule_after_turn(games[1])
-
+        self.assertEqual(scheduler.due_games(games), [])
         self.assertEqual(scheduler.seconds_until_next_due(games), 3.0)
 
         current_time = 102.0
@@ -68,23 +58,34 @@ class TestBoardMoveScheduler(unittest.TestCase):
         current_time = 103.0
         self.assertEqual([game.board_index for game in scheduler.due_games(games)], [1])
 
+        games[0].move_count = 1
+        scheduler.schedule_after_turn(games[0])
+
+        self.assertEqual(scheduler.seconds_until_next_due(games), 2.0)
+
+        current_time = 105.0
+        self.assertEqual([game.board_index for game in scheduler.due_games(games)], [2])
+
+        games[1].move_count = 1
+        scheduler.schedule_after_turn(games[1])
+        self.assertEqual(scheduler.seconds_until_next_due(games), 1.0)
+
+        current_time = 106.0
+        self.assertEqual([game.board_index for game in scheduler.due_games(games)], [1])
+
         games[0].move_count = 5
         scheduler.schedule_after_turn(games[0])
         self.assertEqual(scheduler.seconds_until_next_due(games), 2.0)
 
-        current_time = 105.0
-        self.assertEqual([game.board_index for game in scheduler.due_games(games)], [1, 2])
+        current_time = 108.0
+        self.assertEqual([game.board_index for game in scheduler.due_games(games)], [1])
 
     def test_finished_board_is_removed_from_schedule(self) -> None:
-        settings = BaseSettings.from_yaml_text(
-            dedent(
-                """
+        settings = BaseSettings.from_yaml_text(dedent("""
                 move_interval_seconds: 5
                 number_of_boards: 1
                 max_moves_per_game: 20
-                """
-            )
-        )
+                """))
         settings.validate()
 
         game = FakeGame(1, finished=True)
