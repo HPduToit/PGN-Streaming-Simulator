@@ -43,6 +43,7 @@ class LiveGame:
         pgn_source_path: Optional[str],
         pgn_game_index: int,
         initial_clock_seconds: int,
+        clock_increment_seconds: int = 0,
         monotonic_clock: Callable[[], float] | None = None,
         wall_clock: Callable[[], float] | None = None,
     ):
@@ -63,6 +64,7 @@ class LiveGame:
         self.board = chess.Board()
         self.move_count = 0
         self.initial_clock_seconds = int(initial_clock_seconds)
+        self.clock_increment_seconds = int(clock_increment_seconds)
         self.white_clock_seconds = self.initial_clock_seconds
         self.black_clock_seconds = self.initial_clock_seconds
         self.first_move_ms: Optional[int] = None
@@ -245,13 +247,15 @@ class LiveGame:
             self.first_move_ms = int(self._wall_clock() * 1000)
 
         if moving_white:
-            self.white_clock_seconds = max(
-                0, self.white_clock_seconds - elapsed_seconds
+            self.white_clock_seconds = (
+                max(0, self.white_clock_seconds - elapsed_seconds)
+                + self.clock_increment_seconds
             )
             remaining_seconds = self.white_clock_seconds
         else:
-            self.black_clock_seconds = max(
-                0, self.black_clock_seconds - elapsed_seconds
+            self.black_clock_seconds = (
+                max(0, self.black_clock_seconds - elapsed_seconds)
+                + self.clock_increment_seconds
             )
             remaining_seconds = self.black_clock_seconds
 

@@ -49,6 +49,7 @@ class GameManager:
                 pgn_source_path=board_settings.pgn_source_path,
                 pgn_game_index=board_settings.pgn_game_index,
                 initial_clock_seconds=self.settings.initial_clock_total_seconds(),
+                clock_increment_seconds=self.settings.clock_increment_seconds,
             )
             self.games.append(game)
             # Write initial PGN (empty game)
@@ -85,6 +86,7 @@ class GameManager:
             pgn_source_path=board_settings.pgn_source_path,
             pgn_game_index=board_settings.pgn_game_index,
             initial_clock_seconds=self.settings.initial_clock_total_seconds(),
+            clock_increment_seconds=self.settings.clock_increment_seconds,
         )
         self.games[board_index - 1] = new_game
 

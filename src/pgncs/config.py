@@ -10,6 +10,30 @@ import yaml
 ALLOWED_MOVE_STRATEGIES: set[str] = {"random", "threefold_preclaim", "pgn_file"}
 
 
+class UniqueKeySafeLoader(yaml.SafeLoader):
+    """YAML loader that rejects duplicate mapping keys."""
+
+
+def _construct_unique_mapping(
+    loader: UniqueKeySafeLoader,
+    node: yaml.nodes.MappingNode,
+    deep: bool = False,
+) -> dict[Any, Any]:
+    mapping: dict[Any, Any] = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            raise ValueError(f"Duplicate config key: {key}")
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+UniqueKeySafeLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    _construct_unique_mapping,
+)
+
+
 @dataclass
 class MoveIntervalScheduleEntry:
     """One segment of a per-board move interval schedule."""
@@ -54,6 +78,7 @@ class BaseSettings:
     pgn_game_index: int = 1
     initial_clock_minutes: int = 60
     initial_clock_seconds: int = 0
+    clock_increment_seconds: int = 0
     output_directory: str = "./pgn_output"
     event_name: str = "Test Live Tournament"
     site: str = "LiveChessCloud Simulator"
@@ -76,7 +101,7 @@ class BaseSettings:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         with open(path, "r", encoding="utf-8") as f:
-            raw_data = yaml.safe_load(f)
+            raw_data = yaml.load(f, Loader=UniqueKeySafeLoader)
         settings = cls._from_raw_data(raw_data, base_directory=path.parent)
         return settings
 
@@ -88,7 +113,7 @@ class BaseSettings:
         base_directory: Optional[Path] = None,
     ) -> "BaseSettings":
         """Load settings from YAML text."""
-        raw_data = yaml.safe_load(yaml_text)
+        raw_data = yaml.load(yaml_text, Loader=UniqueKeySafeLoader)
         return cls._from_raw_data(raw_data, base_directory=base_directory)
 
     @classmethod
@@ -352,6 +377,7 @@ class BaseSettings:
             "pgn_game_index": self.pgn_game_index,
             "initial_clock_minutes": self.initial_clock_minutes,
             "initial_clock_seconds": self.initial_clock_seconds,
+            "clock_increment_seconds": self.clock_increment_seconds,
             "output_directory": self.output_directory,
             "event_name": self.event_name,
             "site": self.site,
@@ -423,6 +449,7 @@ class BaseSettings:
         if self.pgn_game_index <= 0:
             raise ValueError("pgn_game_index must be >= 1")
         self._validate_initial_clock()
+        self._validate_clock_increment()
         if self.move_strategy not in ALLOWED_MOVE_STRATEGIES:
             raise ValueError(
                 "move_strategy must be 'random', 'threefold_preclaim', or 'pgn_file'"
@@ -523,3 +550,17 @@ class BaseSettings:
             raise ValueError("initial_clock_seconds must be between 0 and 59")
         if self.initial_clock_total_seconds() <= 0:
             raise ValueError("initial clock must be greater than 0 seconds")
+
+    def _validate_clock_increment(self) -> None:
+        raw_value = self.clock_increment_seconds
+        if isinstance(raw_value, bool) or (
+            isinstance(raw_value, float) and not raw_value.is_integer()
+        ):
+            raise ValueError("clock_increment_seconds must be an integer")
+        try:
+            self.clock_increment_seconds = int(raw_value)
+        except (TypeError, ValueError):
+            raise ValueError("clock_increment_seconds must be an integer") from None
+
+        if self.clock_increment_seconds < 0:
+            raise ValueError("clock_increment_seconds must be >= 0")

@@ -126,6 +126,52 @@ class TestLiveChessPayloadClock(unittest.TestCase):
             self.assertEqual(payload["clock"], None)
             self.assertEqual(payload["moves"], ["e4 60+0", "e5 57+3"])
 
+    def test_increment_is_added_after_each_move(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            pgn_path = Path(tmp_dir) / "increment-clock-test.pgn"
+            _write_two_move_pgn(pgn_path)
+            current_monotonic = 100.0
+            current_wall = 1_716_507_000.0
+
+            def monotonic_clock() -> float:
+                return current_monotonic
+
+            def wall_clock() -> float:
+                return current_wall
+
+            game = LiveGame(
+                board_index=1,
+                game_index=1,
+                event_name="Clock Test",
+                site="Simulator",
+                round_prefix="Round",
+                max_moves=20,
+                move_strategy="pgn_file",
+                threefold_stop_preclaim=True,
+                pgn_source_path=str(pgn_path),
+                pgn_game_index=1,
+                initial_clock_seconds=60,
+                clock_increment_seconds=30,
+                monotonic_clock=monotonic_clock,
+                wall_clock=wall_clock,
+            )
+
+            current_monotonic = 104.0
+            current_wall = 1_716_507_004.0
+            game.make_next_move()
+            first_move_payload = build_game_payload("clock-test", 1, game)
+            self.assertEqual(first_move_payload["moves"], ["e4 86+4"])
+            self.assertEqual(first_move_payload["clock"]["white"], 86)
+            self.assertEqual(first_move_payload["clock"]["black"], 60)
+
+            current_monotonic = 107.0
+            current_wall = 1_716_507_007.0
+            game.make_next_move()
+            second_move_payload = build_game_payload("clock-test", 1, game)
+            self.assertEqual(second_move_payload["moves"], ["e4 86+4", "e5 87+3"])
+            self.assertEqual(second_move_payload["clock"]["white"], 86)
+            self.assertEqual(second_move_payload["clock"]["black"], 87)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,7 +5,7 @@
 move_interval_seconds: 3
 
 # Number of parallel games/boards to simulate
-number_of_boards: 2
+number_of_boards: 4
 
 # Maximum number of half-moves (plies) per game before forced draw
 max_moves_per_game: 200
@@ -42,10 +42,10 @@ event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
 
 # Active tournament round exposed by the PGN server endpoints (round-{n})
-round_number: 1
+round_number: 2
 
 # Prefix for round/board identification in PGN headers
-round_prefix: "Round 1 Board"
+round_prefix: "Round 2 Board"
 
 # If true, automatically start a new game when one finishes
 auto_restart_games: false

@@ -26,8 +26,11 @@ pgn_source_path: "./pgn_input/5fold_rep.pgn"
 pgn_game_index: 1
 
 # Starting clock assigned to each player.
-initial_clock_minutes: 15
+initial_clock_minutes: 90
 initial_clock_seconds: 30
+
+# Increment added to the player after each move, in seconds.
+clock_increment_seconds: 30
 
 # Optional per-board overrides.
 # Fallback rule: any missing field on board N inherits from resolved board N-1.
@@ -43,13 +46,13 @@ board_configs:
     pgn_source_path: "./pgn_input/3fold_rep.pgn"
     move_interval_schedule:
       - moves: 300
-        interval_seconds: 10
+        interval_seconds: 5
   - board: 2
     move_strategy: "random"
     pgn_source_path: "./pgn_input/3fold_rep.pgn"
     move_interval_schedule:
       - moves: 300
-        interval_seconds: 10
+        interval_seconds: 5
   - board: 3
     move_strategy: "random"
     pgn_source_path: "./pgn_input/US_Junior_b5_r8.pgn"

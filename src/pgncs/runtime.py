@@ -103,6 +103,7 @@ class TournamentRunner:
                     pgn_source_path=board_settings.pgn_source_path,
                     pgn_game_index=board_settings.pgn_game_index,
                     initial_clock_seconds=self.settings.initial_clock_total_seconds(),
+                    clock_increment_seconds=self.settings.clock_increment_seconds,
                 )
             )
         return games

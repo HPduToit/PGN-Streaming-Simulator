@@ -123,6 +123,7 @@ def legacy_main(argv: list[str]) -> None:
     logger.info("  Move interval: %ss", settings.move_interval_seconds)
     logger.info("  Max moves per game: %s", settings.max_moves_per_game)
     logger.info("  Initial clock: %ss", settings.initial_clock_total_seconds())
+    logger.info("  Clock increment: %ss", settings.clock_increment_seconds)
     logger.info("  Output directory: %s", settings.output_directory)
     logger.info("  Event: %s", settings.event_name)
     logger.info("  Round number: %s", settings.round_number)

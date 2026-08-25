@@ -14,6 +14,7 @@ class TestInitialClockConfig(unittest.TestCase):
                 max_moves_per_game: 20
                 initial_clock_minutes: 90
                 initial_clock_seconds: 30
+                clock_increment_seconds: 5
                 """))
         settings.validate()
 
@@ -24,6 +25,7 @@ class TestInitialClockConfig(unittest.TestCase):
         self.assertEqual(rehydrated.initial_clock_minutes, 90)
         self.assertEqual(rehydrated.initial_clock_seconds, 30)
         self.assertEqual(rehydrated.initial_clock_total_seconds(), 5430)
+        self.assertEqual(rehydrated.clock_increment_seconds, 5)
 
     def test_invalid_initial_clock_is_rejected(self) -> None:
         cases = [
@@ -67,6 +69,24 @@ class TestInitialClockConfig(unittest.TestCase):
                 """,
                 "initial_clock_minutes must be an integer",
             ),
+            (
+                """
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                clock_increment_seconds: -1
+                """,
+                "clock_increment_seconds must be >= 0",
+            ),
+            (
+                """
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                clock_increment_seconds: 1.5
+                """,
+                "clock_increment_seconds must be an integer",
+            ),
         ]
 
         for yaml_text, expected_message in cases:
@@ -74,6 +94,18 @@ class TestInitialClockConfig(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, expected_message):
                     settings = BaseSettings.from_yaml_text(dedent(yaml_text))
                     settings.validate()
+
+    def test_duplicate_config_keys_are_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError, "Duplicate config key: clock_increment_seconds"
+        ):
+            BaseSettings.from_yaml_text(dedent("""
+                move_interval_seconds: 5
+                number_of_boards: 1
+                max_moves_per_game: 20
+                clock_increment_seconds: 30
+                clock_increment_seconds: 0
+                """))
 
 
 class TestMoveIntervalScheduleConfig(unittest.TestCase):

@@ -64,6 +64,7 @@ pgn_source_path: ""
 pgn_game_index: 1
 initial_clock_minutes: 90
 initial_clock_seconds: 0
+clock_increment_seconds: 30
 board_configs:
   - board: 1
     move_strategy: "random"
@@ -125,6 +126,7 @@ Or use the destructive reset/restart flow:
 - `pgn_game_index` (int): Global default 1-based game index paired with `pgn_source_path` for `pgn_file`; also participates in board fallback
 - `initial_clock_minutes` (int): Starting clock minutes for every board in the configured round
 - `initial_clock_seconds` (int): Additional starting clock seconds, from `0` to `59`
+- `clock_increment_seconds` (int): Increment added to the player after each move
 - `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`, `move_interval_schedule`)
 - `move_interval_schedule` (list): Optional per-board pacing schedule. Each entry has `interval_seconds` and optional `moves`; `moves` counts half-moves/plies. The final entry may omit `moves` to apply for the rest of the game. If all entries include `moves`, the final interval repeats after the listed segments.
 - `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config. `move_interval_schedule` is board-specific and does not cascade; boards without it use `move_interval_seconds`.
