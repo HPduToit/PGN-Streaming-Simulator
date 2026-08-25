@@ -46,17 +46,29 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    create_parser = subparsers.add_parser("create", help="Create a new stored tournament from config")
-    create_parser.add_argument("--config", required=True, help="Path to configuration file")
-    create_parser.add_argument("--start", action="store_true", help="Immediately mark the new tournament as running")
+    create_parser = subparsers.add_parser(
+        "create", help="Create a new stored tournament from config"
+    )
+    create_parser.add_argument(
+        "--config", required=True, help="Path to configuration file"
+    )
+    create_parser.add_argument(
+        "--start",
+        action="store_true",
+        help="Immediately mark the new tournament as running",
+    )
 
-    start_parser = subparsers.add_parser("start", help="Mark an existing tournament as running")
+    start_parser = subparsers.add_parser(
+        "start", help="Mark an existing tournament as running"
+    )
     start_parser.add_argument("code", help="Tournament UUID/code")
 
     stop_parser = subparsers.add_parser("stop", help="Stop a running tournament")
     stop_parser.add_argument("code", help="Tournament UUID/code")
 
-    update_parser = subparsers.add_parser("update", help="Replace a stored tournament config")
+    update_parser = subparsers.add_parser(
+        "update", help="Replace a stored tournament config"
+    )
     update_parser.add_argument("code", help="Tournament UUID/code")
     update_parser.add_argument(
         "--config",
@@ -64,15 +76,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to replacement configuration file (default: %(default)s)",
     )
 
-    status_parser = subparsers.add_parser("status", help="Show persisted tournament status")
+    status_parser = subparsers.add_parser(
+        "status", help="Show persisted tournament status"
+    )
     status_parser.add_argument("code", help="Tournament UUID/code")
 
-    reset_parser = subparsers.add_parser("reset-db", help="Drop and recreate the simulator database schema")
-    reset_parser.add_argument("--yes", action="store_true", help="Confirm destructive reset")
-    reset_parser.add_argument("--wipe-output", action="store_true", help="Also remove generated output files")
+    reset_parser = subparsers.add_parser(
+        "reset-db", help="Drop and recreate the simulator database schema"
+    )
+    reset_parser.add_argument(
+        "--yes", action="store_true", help="Confirm destructive reset"
+    )
+    reset_parser.add_argument(
+        "--wipe-output", action="store_true", help="Also remove generated output files"
+    )
 
-    simulate_parser = subparsers.add_parser("simulate", help="Legacy single-config simulator mode")
-    simulate_parser.add_argument("--config", required=True, help="Path to configuration file")
+    simulate_parser = subparsers.add_parser(
+        "simulate", help="Legacy single-config simulator mode"
+    )
+    simulate_parser.add_argument(
+        "--config", required=True, help="Path to configuration file"
+    )
 
     return parser
 
@@ -82,7 +106,9 @@ def legacy_main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         description="Chess tournament simulator with live PGN updates"
     )
-    parser.add_argument("--config", required=True, help="Path to configuration file (YAML format)")
+    parser.add_argument(
+        "--config", required=True, help="Path to configuration file (YAML format)"
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args(argv)
 
@@ -96,6 +122,7 @@ def legacy_main(argv: list[str]) -> None:
     logger.info("  Boards: %s", settings.number_of_boards)
     logger.info("  Move interval: %ss", settings.move_interval_seconds)
     logger.info("  Max moves per game: %s", settings.max_moves_per_game)
+    logger.info("  Initial clock: %ss", settings.initial_clock_total_seconds())
     logger.info("  Output directory: %s", settings.output_directory)
     logger.info("  Event: %s", settings.event_name)
     logger.info("  Round number: %s", settings.round_number)
@@ -168,7 +195,8 @@ def main() -> None:
     """Main entry point."""
     argv = sys.argv[1:]
     legacy_requested = "--config" in argv and not any(
-        arg in {"create", "start", "stop", "update", "status", "reset-db", "simulate"} for arg in argv
+        arg in {"create", "start", "stop", "update", "status", "reset-db", "simulate"}
+        for arg in argv
     )
     if legacy_requested:
         legacy_main(argv)
@@ -194,7 +222,9 @@ def main() -> None:
             settings = BaseSettings.from_file(args.config)
             settings.validate()
             if settings.auto_restart_games:
-                raise ValueError("auto_restart_games must be false for persisted tournaments")
+                raise ValueError(
+                    "auto_restart_games must be false for persisted tournaments"
+                )
             code = repository.create_tournament(settings)
             if args.start:
                 repository.mark_tournament_running(code)
@@ -227,7 +257,9 @@ def main() -> None:
             settings = BaseSettings.from_file(args.config)
             settings.validate()
             if settings.auto_restart_games:
-                raise ValueError("auto_restart_games must be false for persisted tournaments")
+                raise ValueError(
+                    "auto_restart_games must be false for persisted tournaments"
+                )
             repository.update_tournament(args.code, settings)
             print(args.code)
             return
@@ -236,7 +268,9 @@ def main() -> None:
             tournament = repository.get_tournament(args.code)
             if tournament is None:
                 raise KeyError(f"Tournament not found: {args.code}")
-            snapshots = repository.list_game_snapshots(args.code, tournament.settings.round_number)
+            snapshots = repository.list_game_snapshots(
+                args.code, tournament.settings.round_number
+            )
             print(
                 f"code={tournament.code} status={tournament.status} round={tournament.settings.round_number} "
                 f"boards={len(snapshots)} created_at={tournament.created_at}"

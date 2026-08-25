@@ -7,7 +7,6 @@ from typing import Any as Any, Dict as Dict, Optional as Optional
 
 import yaml
 
-
 ALLOWED_MOVE_STRATEGIES: set[str] = {"random", "threefold_preclaim", "pgn_file"}
 
 
@@ -53,6 +52,8 @@ class BaseSettings:
     threefold_stop_preclaim: bool = True
     pgn_source_path: Optional[str] = None
     pgn_game_index: int = 1
+    initial_clock_minutes: int = 60
+    initial_clock_seconds: int = 0
     output_directory: str = "./pgn_output"
     event_name: str = "Test Live Tournament"
     site: str = "LiveChessCloud Simulator"
@@ -118,7 +119,9 @@ class BaseSettings:
             raise ValueError("Config payload must be a mapping")
         data = dict(raw_data or {})
 
-        round_value = data.get("round_number", data.get("round_index", data.get("round")))
+        round_value = data.get(
+            "round_number", data.get("round_index", data.get("round"))
+        )
         if round_value is not None:
             data["round_number"] = round_value
         data.pop("round_index", None)
@@ -295,7 +298,9 @@ class BaseSettings:
             self._resolved_board_settings = self._resolve_board_settings()
         return self._resolved_board_settings[board_index]
 
-    def get_move_interval_seconds(self, board_index: int, completed_moves: int) -> float:
+    def get_move_interval_seconds(
+        self, board_index: int, completed_moves: int
+    ) -> float:
         """Return the interval before a board's next move."""
         if completed_moves < 0:
             raise ValueError("completed_moves must be >= 0")
@@ -345,6 +350,8 @@ class BaseSettings:
             "threefold_stop_preclaim": self.threefold_stop_preclaim,
             "pgn_source_path": self.pgn_source_path,
             "pgn_game_index": self.pgn_game_index,
+            "initial_clock_minutes": self.initial_clock_minutes,
+            "initial_clock_seconds": self.initial_clock_seconds,
             "output_directory": self.output_directory,
             "event_name": self.event_name,
             "site": self.site,
@@ -383,6 +390,10 @@ class BaseSettings:
             allow_unicode=False,
         )
 
+    def initial_clock_total_seconds(self) -> int:
+        """Return the configured starting clock as whole seconds."""
+        return int(self.initial_clock_minutes) * 60 + int(self.initial_clock_seconds)
+
     @staticmethod
     def _resolve_optional_path(path_value: str, base_directory: Optional[Path]) -> str:
         return str(BaseSettings._resolve_path(Path(path_value), base_directory))
@@ -411,6 +422,7 @@ class BaseSettings:
             raise ValueError("round_number must be >= 1")
         if self.pgn_game_index <= 0:
             raise ValueError("pgn_game_index must be >= 1")
+        self._validate_initial_clock()
         if self.move_strategy not in ALLOWED_MOVE_STRATEGIES:
             raise ValueError(
                 "move_strategy must be 'random', 'threefold_preclaim', or 'pgn_file'"
@@ -491,3 +503,23 @@ class BaseSettings:
                     "move_interval_schedule moves must be >= 1 "
                     f"in board_configs for board {cfg.board}"
                 )
+
+    def _validate_initial_clock(self) -> None:
+        for field_name in ("initial_clock_minutes", "initial_clock_seconds"):
+            raw_value = getattr(self, field_name)
+            if isinstance(raw_value, bool) or (
+                isinstance(raw_value, float) and not raw_value.is_integer()
+            ):
+                raise ValueError(f"{field_name} must be an integer")
+            try:
+                normalized_value = int(raw_value)
+            except (TypeError, ValueError):
+                raise ValueError(f"{field_name} must be an integer") from None
+            setattr(self, field_name, normalized_value)
+
+        if self.initial_clock_minutes < 0:
+            raise ValueError("initial_clock_minutes must be >= 0")
+        if self.initial_clock_seconds < 0 or self.initial_clock_seconds > 59:
+            raise ValueError("initial_clock_seconds must be between 0 and 59")
+        if self.initial_clock_total_seconds() <= 0:
+            raise ValueError("initial clock must be greater than 0 seconds")

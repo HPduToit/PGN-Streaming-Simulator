@@ -1,11 +1,30 @@
 """Live game representation for a single chess board."""
 
+from __future__ import annotations
+
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime
+
 import chess
 import chess.pgn
-from datetime import datetime
 from typing import Optional as Optional
 
 from .strategy import StrategyResult, create_move_strategy
+
+
+@dataclass(frozen=True)
+class MoveClockAnnotation:
+    """LiveChess move annotation with remaining and elapsed seconds."""
+
+    elapsed_seconds: int
+    remaining_seconds: int
+    san: str
+
+    def to_livechess_move(self) -> str:
+        """Return the DGT-style move string."""
+        return f"{self.san} {self.remaining_seconds}+{self.elapsed_seconds}"
 
 
 class LiveGame:
@@ -23,6 +42,9 @@ class LiveGame:
         threefold_stop_preclaim: bool,
         pgn_source_path: Optional[str],
         pgn_game_index: int,
+        initial_clock_seconds: int,
+        monotonic_clock: Callable[[], float] | None = None,
+        wall_clock: Callable[[], float] | None = None,
     ):
         """Initialize a new live game.
 
@@ -40,6 +62,14 @@ class LiveGame:
         self.max_moves = max_moves
         self.board = chess.Board()
         self.move_count = 0
+        self.initial_clock_seconds = int(initial_clock_seconds)
+        self.white_clock_seconds = self.initial_clock_seconds
+        self.black_clock_seconds = self.initial_clock_seconds
+        self.first_move_ms: Optional[int] = None
+        self.move_clock_annotations: list[MoveClockAnnotation] = []
+        self._monotonic_clock = monotonic_clock or time.monotonic
+        self._wall_clock = wall_clock or time.time
+        self._last_clock_update_at = self._monotonic_clock()
         self._forced_stop_reason: Optional[str] = None
         self.strategy = create_move_strategy(
             move_strategy,
@@ -75,6 +105,8 @@ class LiveGame:
         if self.is_finished():
             return StrategyResult(move=None)
 
+        move_started_at = self._monotonic_clock()
+        moving_white = self.board.turn == chess.WHITE
         result = self.strategy.select_move(
             self.board,
             self.move_count,
@@ -84,9 +116,15 @@ class LiveGame:
                 self._forced_stop_reason = result.stop_reason or "strategy stop"
             return result
 
+        san = self.board.san(result.move)
         self.board.push(result.move)
         self.move_count += 1
         self.pgn_node = self.pgn_node.add_variation(result.move)
+        self._record_move_clock(
+            san=san,
+            moving_white=moving_white,
+            move_started_at=move_started_at,
+        )
 
         if result.stop:
             self._forced_stop_reason = result.stop_reason or "strategy stop"
@@ -100,6 +138,21 @@ class LiveGame:
         if self.move_count >= self.max_moves:
             return True
         return self.board.is_game_over()
+
+    def get_clock_payload(self) -> dict[str, int | bool | None]:
+        """Return the current top-level LiveChess clock object."""
+        return {
+            "white": self.white_clock_seconds,
+            "black": self.black_clock_seconds,
+            "run": self.board.turn == chess.WHITE if not self.is_finished() else None,
+            "time": int(self._wall_clock() * 1000),
+        }
+
+    def get_livechess_moves(self) -> list[str]:
+        """Return DGT-style move strings with clock suffixes."""
+        return [
+            annotation.to_livechess_move() for annotation in self.move_clock_annotations
+        ]
 
     def get_result(self) -> str:
         """Get the result string for the finished game.
@@ -176,3 +229,36 @@ class LiveGame:
             temp_board.pop()
             return temp_board.san(last_move)
         return None
+
+    def _record_move_clock(
+        self,
+        *,
+        san: str,
+        moving_white: bool,
+        move_started_at: float,
+    ) -> None:
+        elapsed_seconds = max(
+            0, int(round(move_started_at - self._last_clock_update_at))
+        )
+        self._last_clock_update_at = move_started_at
+        if self.first_move_ms is None:
+            self.first_move_ms = int(self._wall_clock() * 1000)
+
+        if moving_white:
+            self.white_clock_seconds = max(
+                0, self.white_clock_seconds - elapsed_seconds
+            )
+            remaining_seconds = self.white_clock_seconds
+        else:
+            self.black_clock_seconds = max(
+                0, self.black_clock_seconds - elapsed_seconds
+            )
+            remaining_seconds = self.black_clock_seconds
+
+        self.move_clock_annotations.append(
+            MoveClockAnnotation(
+                elapsed_seconds=elapsed_seconds,
+                remaining_seconds=remaining_seconds,
+                san=san,
+            )
+        )

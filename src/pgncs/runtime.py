@@ -12,14 +12,15 @@ from .repository import StoredTournament, TournamentRepository
 from .timing import BoardMoveScheduler
 from .writer import PgnWriter
 
-
 logger = logging.getLogger(__name__)
 
 
 class TournamentRunner:
     """Run one stored tournament until all boards finish."""
 
-    def __init__(self, tournament: StoredTournament, repository: TournamentRepository) -> None:
+    def __init__(
+        self, tournament: StoredTournament, repository: TournamentRepository
+    ) -> None:
         self.tournament = tournament
         self.repository = repository
         self.settings = tournament.settings
@@ -34,7 +35,9 @@ class TournamentRunner:
 
     @property
     def _output_directory(self) -> str:
-        return str((Path(self.settings.output_directory) / self.tournament.code).resolve())
+        return str(
+            (Path(self.settings.output_directory) / self.tournament.code).resolve()
+        )
 
     def start(self) -> None:
         self.task = asyncio.create_task(self.run(), name=f"tournament-{self.code}")
@@ -99,6 +102,7 @@ class TournamentRunner:
                     threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
                     pgn_source_path=board_settings.pgn_source_path,
                     pgn_game_index=board_settings.pgn_game_index,
+                    initial_clock_seconds=self.settings.initial_clock_total_seconds(),
                 )
             )
         return games
@@ -127,7 +131,9 @@ class TournamentRuntimeManager:
         self._shutdown = asyncio.Event()
 
     async def start(self) -> None:
-        self._supervisor_task = asyncio.create_task(self._supervise(), name="pgn-supervisor")
+        self._supervisor_task = asyncio.create_task(
+            self._supervise(), name="pgn-supervisor"
+        )
 
     async def stop(self) -> None:
         self._shutdown.set()

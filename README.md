@@ -11,6 +11,7 @@ A Python-based chess tournament simulator that stores tournament configs in a da
 - Stops a specific running tournament on demand
 - Runs multiple tournaments concurrently from one FastAPI server process
 - Serves `tournament.json`, `round-{n}/index.json`, and `game-{board}.json?poll` per tournament code
+- Emits DGT-style LiveChess move entries with remaining-clock and elapsed-move suffixes
 - Writes per-board PGN files under `output_directory/<uuid>/`
 - Stops a tournament automatically when all boards finish
 - Includes destructive clean/reset/restart scripts similar to UMS
@@ -61,6 +62,8 @@ move_strategy: "random"
 threefold_stop_preclaim: true
 pgn_source_path: ""
 pgn_game_index: 1
+initial_clock_minutes: 90
+initial_clock_seconds: 0
 board_configs:
   - board: 1
     move_strategy: "random"
@@ -120,6 +123,8 @@ Or use the destructive reset/restart flow:
 - `threefold_stop_preclaim` (bool): In threefold mode, stop one ply before the claimable repetition
 - `pgn_source_path` (str): Global default PGN path for `pgn_file`; board 1 starts from this value and later boards may inherit it via fallback unless overridden in `board_configs`
 - `pgn_game_index` (int): Global default 1-based game index paired with `pgn_source_path` for `pgn_file`; also participates in board fallback
+- `initial_clock_minutes` (int): Starting clock minutes for every board in the configured round
+- `initial_clock_seconds` (int): Additional starting clock seconds, from `0` to `59`
 - `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`, `move_interval_schedule`)
 - `move_interval_schedule` (list): Optional per-board pacing schedule. Each entry has `interval_seconds` and optional `moves`; `moves` counts half-moves/plies. The final entry may omit `moves` to apply for the rest of the game. If all entries include `moves`, the final interval repeats after the listed segments.
 - `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config. `move_interval_schedule` is board-specific and does not cascade; boards without it use `move_interval_seconds`.

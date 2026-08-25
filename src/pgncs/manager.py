@@ -8,7 +8,6 @@ from .game import LiveGame
 from .timing import BoardMoveScheduler
 from .writer import PgnWriter
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,6 +48,7 @@ class GameManager:
                 threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
                 pgn_source_path=board_settings.pgn_source_path,
                 pgn_game_index=board_settings.pgn_game_index,
+                initial_clock_seconds=self.settings.initial_clock_total_seconds(),
             )
             self.games.append(game)
             # Write initial PGN (empty game)
@@ -84,6 +84,7 @@ class GameManager:
             threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
             pgn_source_path=board_settings.pgn_source_path,
             pgn_game_index=board_settings.pgn_game_index,
+            initial_clock_seconds=self.settings.initial_clock_total_seconds(),
         )
         self.games[board_index - 1] = new_game
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from .game import LiveGame
@@ -20,19 +19,17 @@ def build_game_payload(
     game: LiveGame,
 ) -> dict[str, Any]:
     """Serialize a game into the JSON shape expected by DMA."""
-    moves = _game_moves_to_san(game)
+    moves = game.get_livechess_moves()
     live = not game.is_finished()
     return {
         "live": live,
         "serialNr": board_serial(tournament_code, game.board_index),
-        "clock": {
-            "white": 360000 if live else 0,
-            "black": 360000 if live else 0,
-            "run": None,
-            "time": int(datetime.now(timezone.utc).timestamp() * 1000),
-        },
-        "moves": moves,
+        "firstMove": game.first_move_ms,
+        "chess960": None,
         "result": game.get_result(),
+        "comment": None,
+        "clock": game.get_clock_payload() if live else None,
+        "moves": moves,
         "finished": not live,
         "white": game.pgn_game.headers.get("White", ""),
         "black": game.pgn_game.headers.get("Black", ""),
@@ -75,13 +72,3 @@ def build_tournament_payload(
         "rounds": rounds,
         "eboards": [str(payload.get("serialNr", "")) for payload in game_payloads],
     }
-
-
-def _game_moves_to_san(game: LiveGame) -> list[str]:
-    moves: list[str] = []
-    board = game.pgn_game.board()
-    for move in game.pgn_game.mainline_moves():
-        moves.append(board.san(move))
-        board.push(move)
-    return moves
-
