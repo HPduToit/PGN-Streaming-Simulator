@@ -5,10 +5,10 @@
 move_interval_seconds: 2
 
 # Number of parallel games/boards to simulate
-number_of_boards: 4
+number_of_boards: 6
 
 # Maximum number of half-moves (plies) per game before forced draw
-max_moves_per_game: 300
+max_moves_per_game: 10
 
 # Move strategy: random, threefold_preclaim, or pgn_file
 move_strategy: "random"
@@ -26,11 +26,11 @@ pgn_source_path: "./pgn_input/5fold_rep.pgn"
 pgn_game_index: 1
 
 # Starting clock assigned to each player.
-initial_clock_minutes: 90
-initial_clock_seconds: 30
+initial_clock_minutes: 15
+initial_clock_seconds: 15
 
 # Increment added to the player after each move, in seconds.
-clock_increment_seconds: 30
+clock_increment_seconds: 0
 
 # Optional per-board overrides.
 # Fallback rule: any missing field on board N inherits from resolved board N-1.
@@ -41,35 +41,62 @@ clock_increment_seconds: 30
 # and interval_seconds_max for randomized timing.
 # For any board that resolves to move_strategy: pgn_file, a non-empty pgn_source_path
 # must resolve (either from that board override or inherited fallback/global default).
+
+#quick_w_win
+#quick_b_win
+#quick_draw
+#
+# October 2026 FIDE standard top 12, shuffled among six boards.
+# https://ratings.fide.com/download_lists.phtml
 board_configs:
   - board: 1
-    move_strategy: "random"
-    pgn_source_path: "./pgn_input/3fold_rep.pgn"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/quick_b_win.pgn"
+    white_name: "Abdusattorov, Nodirbek"
+    black_name: "Nakamura, Hikaru"
     move_interval_schedule:
-      - moves: 300
-        interval_seconds_min: 5
-        interval_seconds_max: 10
+      - moves: 10
+        interval_seconds: 2
   - board: 2
-    move_strategy: "random"
-    pgn_source_path: "./pgn_input/3fold_rep.pgn"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/quick_b_win.pgn"
+    white_name: "Sindarov, Javokhir"
+    black_name: "So, Wesley"
     move_interval_schedule:
       - moves: 300
-        interval_seconds_min: 5
-        interval_seconds_max: 10
+        interval_seconds: 2
   - board: 3
-    move_strategy: "random"
-    pgn_source_path: "./pgn_input/US_Junior_b5_r8.pgn"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/quick_w_win.pgn"
+    white_name: "Erigaisi Arjun"
+    black_name: "Giri, Anish"
     move_interval_schedule:
       - moves: 300
-        interval_seconds_min: 5
-        interval_seconds_max: 10
+        interval_seconds: 2
   - board: 4
-    move_strategy: "random"
-    pgn_source_path: "./pgn_input/US_Junior_b5_r8.pgn"
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/quick_w_win.pgn"
+    white_name: "Praggnanandhaa R"
+    black_name: "Keymer, Vincent"
     move_interval_schedule:
       - moves: 300
-        interval_seconds_min: 5
-        interval_seconds_max: 10
+        interval_seconds: 2
+  - board: 5
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/quick_draw.pgn"
+    white_name: "Carlsen, Magnus"
+    black_name: "Wei, Yi"
+    move_interval_schedule:
+      - moves: 300
+        interval_seconds: 2
+  - board: 6
+    move_strategy: "pgn_file"
+    pgn_source_path: "./pgn_input/quick_draw.pgn"
+    white_name: "Caruana, Fabiano"
+    black_name: "Firouzja, Alireza"
+    move_interval_schedule:
+      - moves: 300
+        interval_seconds: 2
 
 # Directory where PGN files will be written
 output_directory: "./pgn_output"
@@ -81,10 +108,10 @@ event_name: "Test Live Tournament"
 site: "LiveChessCloud Simulator"
 
 # Active tournament round exposed by the PGN server endpoints (round-{n})
-round_number: 1
+round_number: 5
 
 # Prefix for round/board identification in PGN headers
-round_prefix: "Round 1 Board"
+round_prefix: "Round 5 Board"
 
 # If true, automatically start a new game when one finishes
 auto_restart_games: false

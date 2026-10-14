@@ -67,6 +67,8 @@ class BoardOverrideSettings:
     move_strategy: Optional[str] = None
     pgn_source_path: Optional[str] = None
     pgn_game_index: Optional[int] = None
+    white_name: Optional[str] = None
+    black_name: Optional[str] = None
     threefold_stop_preclaim: Optional[bool] = None
     move_interval_schedule: Optional[list[MoveIntervalScheduleEntry]] = None
 
@@ -78,6 +80,8 @@ class BoardRuntimeSettings:
     move_strategy: str
     pgn_source_path: Optional[str]
     pgn_game_index: int
+    white_name: Optional[str]
+    black_name: Optional[str]
     threefold_stop_preclaim: bool
     move_interval_schedule: Optional[list[MoveIntervalScheduleEntry]]
 
@@ -203,6 +207,8 @@ class BaseSettings:
                     move_strategy=item.get("move_strategy"),
                     pgn_source_path=item.get("pgn_source_path"),
                     pgn_game_index=item.get("pgn_game_index"),
+                    white_name=item.get("white_name"),
+                    black_name=item.get("black_name"),
                     threefold_stop_preclaim=item.get("threefold_stop_preclaim"),
                     move_interval_schedule=BaseSettings._parse_move_interval_schedule(
                         item.get("move_interval_schedule"),
@@ -323,6 +329,8 @@ class BaseSettings:
                     move_strategy=self.move_strategy,
                     pgn_source_path=self.pgn_source_path,
                     pgn_game_index=self.pgn_game_index,
+                    white_name=None,
+                    black_name=None,
                     threefold_stop_preclaim=self.threefold_stop_preclaim,
                     move_interval_schedule=None,
                 )
@@ -344,6 +352,8 @@ class BaseSettings:
                     if override and override.pgn_game_index is not None
                     else base.pgn_game_index
                 ),
+                white_name=override.white_name if override else None,
+                black_name=override.black_name if override else None,
                 threefold_stop_preclaim=(
                     override.threefold_stop_preclaim
                     if override and override.threefold_stop_preclaim is not None
@@ -437,6 +447,8 @@ class BaseSettings:
                     "move_strategy": override.move_strategy,
                     "pgn_source_path": override.pgn_source_path,
                     "pgn_game_index": override.pgn_game_index,
+                    "white_name": override.white_name,
+                    "black_name": override.black_name,
                     "threefold_stop_preclaim": override.threefold_stop_preclaim,
                     "move_interval_schedule": (
                         [
@@ -534,6 +546,15 @@ class BaseSettings:
                 raise ValueError(
                     f"pgn_game_index must be >= 1 in board_configs for board {cfg.board}"
                 )
+            for field_name in ("white_name", "black_name"):
+                value = getattr(cfg, field_name)
+                if value is not None and (
+                    not isinstance(value, str) or not value.strip()
+                ):
+                    raise ValueError(
+                        f"{field_name} must be a non-empty string in board_configs "
+                        f"for board {cfg.board}"
+                    )
             self._validate_move_interval_schedule(cfg)
 
         self._resolved_board_settings = self._resolve_board_settings()

@@ -81,6 +81,8 @@ board_configs:
   - board: 2
     move_strategy: "pgn_file"
     pgn_source_path: "./pgn_input/5fold_rep.pgn"
+    white_name: "Alice Example"
+    black_name: "Bob Example"
   - board: 3
     move_strategy: "pgn_file"
     pgn_source_path: "./pgn_input/3fold_rep.pgn"
@@ -132,9 +134,10 @@ Or use the destructive reset/restart flow:
 - `initial_clock_minutes` (int): Starting clock minutes for every board in the configured round
 - `initial_clock_seconds` (int): Additional starting clock seconds, from `0` to `59`
 - `clock_increment_seconds` (int): Increment added to the player after each move
-- `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `threefold_stop_preclaim`, `move_interval_schedule`)
+- `board_configs` (list): Optional per-board overrides (`board`, `move_strategy`, `pgn_source_path`, `pgn_game_index`, `white_name`, `black_name`, `threefold_stop_preclaim`, `move_interval_schedule`)
+- `white_name` / `black_name` (str): Optional player names for that board's game. They appear in the output PGN and LiveChess payloads, including the round pairings. Set them separately for each board, even when boards replay the same source PGN. Omitted names default to `Player 1`, `Player 2`, and so on.
 - `move_interval_schedule` (list): Optional per-board pacing schedule. Each entry has optional `moves` plus either fixed `interval_seconds` or randomized `interval_seconds_min` / `interval_seconds_max`; `moves` counts half-moves/plies. The final entry may omit `moves` to apply for the rest of the game. If all entries include `moves`, the final interval repeats after the listed segments.
-- `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config. `move_interval_schedule` is board-specific and does not cascade; boards without it use `move_interval_seconds`.
+- `board_configs` fallback: Missing values for board N inherit from resolved board N-1 values; board 1 inherits from global config. `white_name`, `black_name`, and `move_interval_schedule` are board-specific and do not cascade; boards without names use generated player names, and boards without a schedule use `move_interval_seconds`.
 - `board_configs` validation: board numbers must be unique, within `1..number_of_boards`, and any board that resolves to `pgn_file` must resolve to an existing `pgn_source_path` (direct override or inherited fallback)
 - `output_directory` (str): Directory where PGN files are written
 - `event_name` (str): Event name for PGN headers
@@ -143,6 +146,15 @@ Or use the destructive reset/restart flow:
 - `round_prefix` (str): Prefix for round/board identification
 - `auto_restart_games` (bool): Automatically start new games when one finishes
 - `use_single_tournament_file` (bool): Maintain a tournament.pgn file with all finished games
+
+To reshuffle the existing player names and PGN files across the configured boards:
+
+```bash
+poetry run python scripts/dev/shuffle_board_config.py
+```
+
+The script edits only `config.yaml`, keeps the same players and number of boards using each PGN file, and gives every board new players and a different PGN file. Pass another YAML path as an argument to shuffle a different config. A stored tournament is updated separately with `./scripts/dev/update_tournament.sh <uuid>` while it is stopped.
+
 4. Create and start tournaments locally:
 
 ```bash

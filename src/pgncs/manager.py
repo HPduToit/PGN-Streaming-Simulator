@@ -48,6 +48,8 @@ class GameManager:
                 threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
                 pgn_source_path=board_settings.pgn_source_path,
                 pgn_game_index=board_settings.pgn_game_index,
+                white_name=board_settings.white_name,
+                black_name=board_settings.black_name,
                 initial_clock_seconds=self.settings.initial_clock_total_seconds(),
                 clock_increment_seconds=self.settings.clock_increment_seconds,
             )
@@ -85,6 +87,8 @@ class GameManager:
             threefold_stop_preclaim=board_settings.threefold_stop_preclaim,
             pgn_source_path=board_settings.pgn_source_path,
             pgn_game_index=board_settings.pgn_game_index,
+            white_name=board_settings.white_name,
+            black_name=board_settings.black_name,
             initial_clock_seconds=self.settings.initial_clock_total_seconds(),
             clock_increment_seconds=self.settings.clock_increment_seconds,
         )

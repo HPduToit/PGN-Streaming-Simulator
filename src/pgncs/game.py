@@ -44,6 +44,8 @@ class LiveGame:
         pgn_game_index: int,
         initial_clock_seconds: int,
         clock_increment_seconds: int = 0,
+        white_name: Optional[str] = None,
+        black_name: Optional[str] = None,
         monotonic_clock: Callable[[], float] | None = None,
         wall_clock: Callable[[], float] | None = None,
     ):
@@ -88,8 +90,8 @@ class LiveGame:
         self.pgn_game.headers["Round"] = f"{round_prefix} {board_index}"
         white_player_number = (board_index * 2) - 1
         black_player_number = board_index * 2
-        self.pgn_game.headers["White"] = f"Player {white_player_number}"
-        self.pgn_game.headers["Black"] = f"Player {black_player_number}"
+        self.pgn_game.headers["White"] = white_name or f"Player {white_player_number}"
+        self.pgn_game.headers["Black"] = black_name or f"Player {black_player_number}"
         self.pgn_game.headers["Board"] = str(board_index)
         if game_index > 1:
             self.pgn_game.headers["GameID"] = str(game_index)
